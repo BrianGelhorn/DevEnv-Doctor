@@ -2,18 +2,18 @@
 
 ## Functional Requirements
 
-- FR-001: The CLI must provide a `check` command.
+- FR-001: The CLI must provide a `check` command. 
 - FR-002: The CLI must accept a target project path.
-- FR-003: The CLI must detect if Docker is installed.
-- FR-004: The CLI must detect if the Docker daemon is running.
-- FR-005: The CLI must detect if Docker Compose is available.
-- FR-006: The CLI must detect a Compose file.
-- FR-007: The CLI must validate Compose YAML syntax.
-- FR-008: The CLI must validate that the `services` section exists and is not empty.
-- FR-009: The CLI must validate that each service has either `image` or `build`.
-- FR-010: The CLI must validate that build contexts referenced by Compose services exists.
-- FR-011: The CLI must validate that Dockerfile exists for services using build.
-- FR-012: The CLI must detect duplicated host ports.
+- FR-003: The CLI must detect if Docker is installed. #
+- FR-004: The CLI must detect if the Docker daemon is running. #
+- FR-005: The CLI must detect if Docker Compose is available. #
+- FR-006: The CLI must detect a Compose file. #
+- FR-007: The CLI must validate Compose YAML syntax. #
+- FR-008: The CLI must validate that the `services` section exists and is not empty. #
+- FR-009: The CLI must validate that each service has a valid `image` or `build`. #
+- FR-010: The CLI must validate that build contexts referenced by Compose services exist. #
+- FR-011: The CLI must validate that Dockerfile exists for services using build. #
+- FR-012: The CLI must detect duplicated host ports. #
 - FR-013: The CLI must detect if the port is already being used by another process.
 - FR-014: The CLI must check `.env.example` when environment variables are used.
 - FR-015: The CLI must show a local readiness status.
