@@ -37,7 +37,7 @@ CLI command `devenv-doctor check .` that checks a Docker Compose project and the
 
 ### Feedback
 
-- Show a binary local readiness status: `Ready` or `Not Ready`.
+- Show a binary local readiness status: `Ready`, `Ready with warnings` or `Not Ready`.
 - Generate an optional quality score.
 - Show a summary of passed checks, warnings, and failures.
 - Show actionable recommendations.
