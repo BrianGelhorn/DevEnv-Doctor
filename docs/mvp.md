@@ -14,7 +14,7 @@ CLI command `devenv-doctor check .` that checks a Docker Compose project and the
 - Detect if Docker is installed.
 - Detect if the Docker daemon is running.
 - Detect if Docker Compose is available.
-- Detect if common ports are already in use.
+- Detect whether the ports used in the project are already being used.
 
 ### Project checks
 
