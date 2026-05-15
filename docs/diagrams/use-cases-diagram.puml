@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+
+actor Developer
+actor "Docker Engine" as DockerEngine
+actor "Docker Compose" as DockerCompose
+actor "Local Filesystem" as FileSystem
+actor "Operating System / Local Ports" as OS
+
+rectangle "devenv-doctor CLI" {
+
+  usecase "Check local Docker/Compose project" as UC001
+  usecase "Generate machine-readable report" as UC002
+  usecase "Run only selected checks" as UC003
+  usecase "Check project using custom Compose file" as UC004
+  usecase "Show only selected severity levels" as UC005
+  usecase "Show CLI usage information" as UC006
+}
+
+Developer --> UC001
+Developer --> UC002
+Developer --> UC003
+Developer --> UC004
+Developer --> UC005
+Developer --> UC006
+
+UC002 ..> UC001 : include
+UC003 ..> UC001 : extend
+UC004 ..> UC001 : extend
+UC005 ..> UC001 : extend
+
+DockerEngine --> UC001
+DockerCompose --> UC001
+FileSystem --> UC001
+OS --> UC001
+
+FileSystem --> UC002
+
+@enduml
