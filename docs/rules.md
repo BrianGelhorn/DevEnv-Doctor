@@ -261,24 +261,46 @@ At least one host port defined in the Docker Compose file is already being used 
 
 Change the affected host port in the Docker Compose file or stop the process that is using the port.
 
-## ENV-001 - Host ports are available on the local system
+## ENV-001 - `.env.example` file exists if `.env` file is being used
 
-**Category:** Networking  
-**Severity:** Blocking  
-**Related requirement:** FR-013
+**Category:** Enviroment  
+**Severity:** Recommendation  
+**Related requirement:** FR-014
 
 ### Description
 
-Checks whether host ports defined in the Docker Compose file are available on the local system.
+Checks whether `.env.example` file is present if the project is using a `.env` file.
 
 ### Pass condition
 
-All host ports defined in the Docker Compose file are available.
+The `.env.example` file is not missing when using a `.env` file.
 
 ### Fail condition
 
-At least one host port defined in the Docker Compose file is already being used by another process.
+The `.env.example` file is missing and the project is using a `.env` file.
 
 ### Recommendation
 
-Change the affected host port in the Docker Compose file or stop the process that is using the port.
+Create a `.env.example` file with the same variables defined at the `.env` file with example values.
+
+## ENV-002 - `.env.example` variables must be paired with `.env` file.
+
+**Category:** Enviroment  
+**Severity:** Recommendation  
+**Related requirement:** FR-021
+
+### Description
+
+Checks whether the `.env.example` file has the same defined variables as the `.env` file.
+
+### Pass condition
+
+The defined `.env.example` variables match with the defined `.env` variables.
+
+### Fail condition
+
+The defined `.env.example` variables does not match the defined `.env` variables.
+
+### Recommendation
+
+Define or delete the variables that are needed to have the variables correctly paired.
