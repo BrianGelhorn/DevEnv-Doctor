@@ -154,3 +154,194 @@ The developer generates a machine-readable file containing the analysis result a
 - FR-018
 - FR-019
 - FR-022
+
+---
+
+## UC-003 - Run only selected checks 
+
+### Principal Actor: Developer
+
+### Objective
+
+As a Developer I want to execute the CLI running only the checks that I select.
+
+### Description:
+
+The Developer runs the CLI in a local project. The CLI analyzes the project only checking what the user specified.
+
+### Preconditions
+
+- The CLI program is installed and available to execute.
+- The Developer has access to the path of the project.
+
+### Main flow:
+
+1. The developer opens a terminal.
+2. The developer runs `devenv-doctor check . --only` and the check names separated by commas.
+3. The CLI analyzes the local project running only the selected checks.
+4. The CLI does not detect any blocking issue or warning.
+5. The CLI displays the status as `Ready`.
+6. The CLI exits with status `Ready` and exit code 0.
+
+### Expected result:  
+The developer runs the analysis of the project only running the checks he specified.
+
+### Alternative flows
+
+#### AF-001: Non-blocking warnings are found
+- If the CLI does not detect blocking issues but detects one or more warnings, displays the status `Ready with warnings` and exits with code 0.
+
+#### AF-002: Blocking issues are found
+- If the CLI detects one or more blocking issues, displays the status `Not Ready` and exits with code 1.
+
+### Related Functional Requirements
+- FR-001
+- FR-002
+- FR-017
+- FR-018
+- FR-019
+- FR-023
+
+---
+
+## UC-004 - Check project using custom Docker Compose file
+
+### Principal Actor: Developer
+
+### Secondary Actor: Docker Engine, Docker Compose, Local Filesystem
+
+### Objective
+
+As a Developer I want to execute the CLI at the target project but using a custom Docker Compose file.
+
+### Description:
+
+The Developer runs the CLI in a local project using a custom Docker Compose file. The CLI analyzes the project using the specified Docker Compose file instead of using the default one inside the project.
+
+### Preconditions
+
+- The CLI program is installed and available to execute.
+- The Developer has access to the path of the project.
+- The Developer has access to the path of the custom Docker Compose file
+
+### Main flow:
+
+1. The developer opens a terminal.
+2. The developer runs `devenv-doctor check . --compose` and the custom Docker Compose file path.
+3. The CLI analyzes the local project using the custom Docker Compose file.
+4. The CLI does not detect any blocking issue or warning.
+5. The CLI displays the status as `Ready`.
+6. The CLI exits with status `Ready` and exit code 0.
+
+### Expected result:  
+The developer runs the analysis of the project using a custom Docker Compose file.
+
+### Alternative flows
+
+#### AF-001: Non-blocking warnings are found
+- If the CLI does not detect blocking issues but detects one or more warnings, displays the status `Ready with warnings` and exits with code 0.
+
+#### AF-002: Blocking issues are found
+- If the CLI detects one or more blocking issues, displays the status `Not Ready` and exits with code 1.
+
+#### AF-003: The specified custom Docker Compose file does not exist
+- If the specified custom Docker Compose file does not exist, the CLI tells the Developer the specified Docker Compose file does not exists and exits with code 2.
+
+#### AF-004: The custom Docker Compose file path is not provided
+- If the Developer uses `--compose` without providing a file path, the CLI tells the Developer that he must specify a Docker Compose file and exits with code 2.
+
+### Related Functional Requirements
+- FR-001
+- FR-002
+- FR-017
+- FR-018
+- FR-019
+- FR-024
+
+---
+
+## UC-005 - Show only selected issue severity levels
+
+### Principal Actor: Developer
+
+### Objective
+
+As a Developer I want to execute the CLI showing only the issues that match with the severity levels I selected.
+
+### Description:
+
+The Developer runs the CLI in a local project using the `--severity` flag followed by the severity levels separated by commas. The CLI analyzes the project and displays only the issues matching the selected severity levels.
+
+### Preconditions
+
+- The CLI program is installed and available to execute.
+- The Developer has access to the path of the project.
+
+### Main flow:
+
+1. The developer opens a terminal.
+2. The developer runs `devenv-doctor check . --severity` and the severity levels separated by commas.
+3. The CLI analyzes the local project.
+4. The CLI filters the issues by the selected severity levels.
+5. The CLI displays only the issues matching the selected severity levels.
+6. The CLI displays the final readiness status.
+7. The CLI exits with the corresponding exit code.
+
+### Expected result:  
+The developer runs the analysis of the project and sees only the severity levels he selected.
+
+### Alternative flows
+
+#### AF-001: The severity levels are invalid
+- If one or more severity levels indicated by the Developer are invalid, the CLI will display the invalid severity levels, will tell the Developer that they are invalid and will exit with the exit code 2.
+
+### Related Functional Requirements
+- FR-001
+- FR-002
+- FR-017
+- FR-018
+- FR-019
+- FR-025
+
+---
+
+## UC-006 - Show CLI usage information
+
+### Principal Actor: Developer
+
+### Objective
+
+As a Developer I want to see information about how to use the CLI.
+
+### Description:
+
+The Developer runs the CLI with the `--help` flag. The CLI will display information about the options, checknames, commands, severity levels, how to use the CLI and basic usage examples.
+
+### Preconditions
+
+- The CLI program is installed and available to execute.
+
+### Main flow:
+
+1. The developer opens a terminal.
+2. The developer runs `devenv-doctor --help`.
+3. The CLI displays the available commands.
+4. The CLI displays the available options.
+5. The CLI displays the accepted severity levels.
+6. The CLI displays the accepted check names.
+7. The CLI displays basic usage examples.
+8. The CLI exits with exit code 0.
+
+### Expected result:  
+The developer understands how to use the CLI commands and the available options.
+
+### Alternative flows
+
+#### AF-001: Help for the check command
+- If the user runs `devenv-doctor check --help`, the CLI will display only the help information related to the `check` command.
+
+### Related Functional Requirements
+- FR-001
+- FR-017
+- FR-023
+- FR-025
