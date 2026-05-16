@@ -1,22 +1,4 @@
-import subprocess
-
-def command_output(command: list[str]) -> tuple[int, str]:
-    try:
-        result = subprocess.run(command,
-                                capture_output=True,
-                                text=True,
-                                check=False,
-                                timeout=5)
-        if result.returncode == 0:
-            return result.returncode, result.stdout.strip()
-        return result.returncode, result.stderr.strip()
-    except FileNotFoundError as e:
-        # 127 is code in linux for command not found
-        return 127, f"Command not found: {e.filename}"
-    except subprocess.TimeoutExpired as e:
-        # 124 is code in linux for timeout
-        return 124, f"The program timed out after {e.timeout} seconds"
-
+from devenv_doctor.core import command_output
 def check_docker_cli_installed() -> tuple[bool, str]:
     exit_code, output = command_output(["docker", "--version"])
     if exit_code == 0:
