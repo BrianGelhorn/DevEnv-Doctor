@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: devenv-doctor
+Version: 0.1.0
+Summary: CLI tool that analyzes local Docker development environments.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: typer>=0.12
+
+# devenv-doctor
+DevEnv Doctor is a CLI tool that analyzes Docker and Docker Compose projects to determine whether they are ready to run in a local development environment. It checks the project against predefined operational policies and best practices, calculates a readiness score, and provides actionable recommendations to fix detected issues.
+
+[MVP](./docs/mvp.md) \
+[Use Cases](./docs/use-cases.md) \
+[Requirements](./docs/requirements.md) \
+[Rules](./docs/rules.md)
