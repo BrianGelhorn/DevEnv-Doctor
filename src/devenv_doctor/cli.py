@@ -4,6 +4,7 @@ import typer
 
 from devenv_doctor.checks.compose import (
     check_docker_compose_available,
+    check_docker_compose_build_contexts,
     check_docker_compose_file_exists,
     check_docker_compose_services_section,
     check_docker_compose_valid_build_or_image,
@@ -54,6 +55,10 @@ def check(
             "Compose build",
             lambda: check_docker_compose_valid_build_or_image(project_path),
         ),
+        (
+            "Compose build contexts",
+            lambda: check_docker_compose_build_contexts(project_path),
+        ),
     ]
 
     typer.echo(f"Checking {project_path}")
@@ -61,17 +66,56 @@ def check(
     passed = 0
     failed = 0
     docker_cli_available = True
+    docker_compose_file_exists = True
+    docker_compose_file_syntax_is_valid = True
+    docker_compose_services_section_is_valid = True
 
     for name, run_check in checks:
         if name in {"Docker daemon", "Docker Compose"} and not docker_cli_available:
             failed += 1
             typer.echo(f"[FAIL] {name}: skipped because Docker CLI is not installed.")
             continue
+        if name == "Compose YAML" and not docker_compose_file_exists:
+            failed += 1
+            typer.echo(f"[FAIL] {name}: skipped because Compose file was not found.")
+            continue
+        if (
+            name in {"Compose services", "Compose build", "Compose build contexts"}
+            and not docker_compose_file_exists
+        ):
+            failed += 1
+            typer.echo(f"[FAIL] {name}: skipped because Compose file was not found.")
+            continue
+        if (
+            name in {"Compose services", "Compose build", "Compose build contexts"}
+            and not docker_compose_file_syntax_is_valid
+        ):
+            failed += 1
+            typer.echo(f"[FAIL] {name}: skipped because Compose YAML is not valid.")
+            continue
+        if (
+            name in {"Compose build", "Compose build contexts"}
+            and not docker_compose_services_section_is_valid
+        ):
+            failed += 1
+            typer.echo(
+                f"[FAIL] {name}: skipped because Compose services are not valid."
+            )
+            continue
 
         ok, message = run_check()
 
         if name == "Docker CLI":
             docker_cli_available = ok
+
+        if name == "Compose file":
+            docker_compose_file_exists = ok
+
+        if name == "Compose YAML":
+            docker_compose_file_syntax_is_valid = ok
+
+        if name == "Compose services":
+            docker_compose_services_section_is_valid = ok
 
         if ok:
             passed += 1
