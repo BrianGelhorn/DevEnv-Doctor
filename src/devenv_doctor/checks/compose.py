@@ -121,3 +121,53 @@ def check_docker_compose_valid_build_or_image(project_path: Path) -> tuple[bool,
 
         return False, output
     return True, "All services have either build or image tag."
+
+
+def get_build_context(build_config: object) -> str | None:
+    if isinstance(build_config, str):
+        return build_config
+    if isinstance(build_config, dict):
+        context = build_config.get("context", ".")
+        if isinstance(context, str):
+            return context
+    return None
+
+
+def check_docker_compose_build_contexts(project_path: Path) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path)
+    # This should not run since the check_docker_compose_file_exists function
+    # should be called before.
+    if compose_file is None:
+        return False, "No Docker Compose file was found."
+
+    parsed_yaml = parse_yaml_file(compose_file)
+
+    # This should not run since the check_docker_compose_yaml_syntax function
+    # should be called before.
+    if parsed_yaml is None:
+        return False, "Docker Compose file YAML has syntax errors."
+
+    invalid_build_contexts = []
+    for service_name, service_config in parsed_yaml["services"].items():
+        if not isinstance(service_config, dict) or "build" not in service_config:
+            continue
+
+        context = get_build_context(service_config["build"])
+        if context is None:
+            invalid_build_contexts.append(f"{service_name} (invalid build context)")
+            continue
+
+        context_path = Path(context)
+        if context_path.is_absolute():
+            full_build_context = context_path
+        else:
+            full_build_context = compose_file.parent / context_path
+
+        if not full_build_context.is_dir():
+            invalid_build_contexts.append(f"{service_name} ({context})")
+
+    if invalid_build_contexts:
+        invalid_contexts = ", ".join(invalid_build_contexts)
+        return False, f"The following build contexts do not exist: {invalid_contexts}."
+
+    return True, "All defined build contexts exist."
