@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 import typer
 
 app = typer.Typer(
@@ -15,7 +14,7 @@ def root() -> None:
 
 @app.command()
 def check(
-    project_path: Optional[Path] = typer.Argument(
+    project_path: Path = typer.Argument(
         ".",
         help="Project path to analyze.",
         exists=True,
@@ -26,5 +25,3 @@ def check(
     ),
 ) -> None:
     """Run the development environment checks."""
-
-    typer.echo(f"Running DevEnv Doctor checks on: {project_path}")
