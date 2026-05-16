@@ -1,2 +1,0 @@
-[console_scripts]
-devenv-doctor = devenv_doctor.__main__:main
