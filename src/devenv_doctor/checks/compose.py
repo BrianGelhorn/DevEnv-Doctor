@@ -41,7 +41,7 @@ def check_docker_compose_file_exists(project_path: Path) -> tuple[bool, str]:
 def parse_yaml_file(file_path: Path) -> Optional[dict]:
     try:
         with file_path.open("r", encoding="utf-8") as file:
-            return yaml.safe_load(file) or None
+            return yaml.safe_load(file) or {}
     except ScannerError:
         return None
 
@@ -52,8 +52,10 @@ def check_docker_compose_yaml_syntax(project_path: Path) -> tuple[bool, str]:
     # should be called before.
     if compose_file is None:
         return False, "No Docker Compose file was found."
-    
-    if parse_yaml_file(compose_file) is None:
+    parsed_yaml = parse_yaml_file(compose_file)
+    if parsed_yaml == {}:
+        return False, "Docker Compose file is empty."
+    if parsed_yaml is None:
         return False, "Docker Compose file YAML has syntax errors."
     return True, "Docker Compose file has valid YAML syntax."   
 
@@ -75,4 +77,6 @@ def check_docker_compose_services_section(project_path: Path) -> tuple[bool, str
         return False, "The services section does not exist."
     if parsed_yaml["services"] is None:
         return False, "The services section is empty."
+    if not isinstance(parsed_yaml["services"], dict):
+        return False, "The services section must be a YAML object."
     return True, "The services section exists and is not empty."
