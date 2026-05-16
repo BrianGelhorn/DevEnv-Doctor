@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from devenv_doctor.checks import compose
+from devenv_doctor.checks import compose, compose_utils
 
 
 def write_compose_file(
@@ -44,7 +44,7 @@ def test_find_compose_file_uses_supported_filename_priority(tmp_path):
     write_compose_file(tmp_path, "services: {}\n", filename="docker-compose.yaml")
     expected = write_compose_file(tmp_path, "services: {}\n", filename="compose.yaml")
 
-    assert compose.find_compose_file(tmp_path) == expected
+    assert compose_utils.find_compose_file(tmp_path) == expected
 
 
 def test_check_docker_compose_file_exists_when_file_is_present(tmp_path):
@@ -161,20 +161,53 @@ def test_check_docker_compose_valid_build_or_image_lists_invalid_services(tmp_pa
 
 
 def test_get_build_context_accepts_string_build_config():
-    assert compose.get_build_context("./api") == "./api"
+    assert compose_utils.get_build_context("./api") == "./api"
 
 
 def test_get_build_context_accepts_object_build_config():
-    assert compose.get_build_context({"context": "./api"}) == "./api"
+    assert compose_utils.get_build_context({"context": "./api"}) == "./api"
 
 
 def test_get_build_context_defaults_object_context_to_current_directory():
-    assert compose.get_build_context({"dockerfile": "Dockerfile.dev"}) == "."
+    assert compose_utils.get_build_context({"dockerfile": "Dockerfile.dev"}) == "."
 
 
 def test_get_build_context_rejects_invalid_build_config():
-    assert compose.get_build_context(["./api"]) is None
-    assert compose.get_build_context({"context": ["./api"]}) is None
+    assert compose_utils.get_build_context(["./api"]) is None
+    assert compose_utils.get_build_context({"context": ["./api"]}) is None
+
+
+def test_get_build_dockerfile_defaults_to_dockerfile():
+    assert compose_utils.get_build_dockerfile("./api") == "Dockerfile"
+    assert compose_utils.get_build_dockerfile({"context": "./api"}) == "Dockerfile"
+
+
+def test_get_build_dockerfile_accepts_object_dockerfile():
+    assert compose_utils.get_build_dockerfile({"dockerfile": "Dockerfile.dev"}) == (
+        "Dockerfile.dev"
+    )
+
+
+def test_get_build_dockerfile_rejects_invalid_config():
+    assert compose_utils.get_build_dockerfile(["./api"]) is None
+    assert compose_utils.get_build_dockerfile(
+        {"dockerfile": ["Dockerfile.dev"]}
+    ) is None
+
+
+def test_has_build_services_detects_build_services(tmp_path):
+    write_compose_file(
+        tmp_path,
+        "services:\n  web:\n    image: nginx\n  api:\n    build: ./api\n",
+    )
+
+    assert compose_utils.has_build_services(tmp_path) is True
+
+
+def test_has_build_services_rejects_compose_without_build_services(tmp_path):
+    write_compose_file(tmp_path, "services:\n  web:\n    image: nginx\n")
+
+    assert compose_utils.has_build_services(tmp_path) is False
 
 
 def test_check_docker_compose_build_contexts_accepts_existing_contexts(tmp_path):
@@ -263,4 +296,70 @@ def test_check_docker_compose_build_contexts_reports_invalid_contexts(tmp_path):
     assert compose.check_docker_compose_build_contexts(tmp_path) == (
         False,
         "The following build contexts do not exist: api (invalid build context).",
+    )
+
+
+def test_check_docker_compose_build_contexts_dockerfiles_accepts_default_dockerfile(
+    tmp_path,
+):
+    (tmp_path / "api").mkdir()
+    (tmp_path / "api" / "Dockerfile").write_text("FROM python:3.12\n", encoding="utf-8")
+    write_compose_file(tmp_path, "services:\n  api:\n    build: ./api\n")
+
+    assert compose.check_docker_compose_build_contexts_dockerfiles(tmp_path) == (
+        True,
+        "All defined build contexts have a Dockerfile.",
+    )
+
+
+def test_check_docker_compose_build_contexts_dockerfiles_accepts_custom_dockerfile(
+    tmp_path,
+):
+    (tmp_path / "api").mkdir()
+    (tmp_path / "api" / "Dockerfile.dev").write_text(
+        "FROM python:3.12\n",
+        encoding="utf-8",
+    )
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  api:\n"
+            "    build:\n"
+            "      context: ./api\n"
+            "      dockerfile: Dockerfile.dev\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_build_contexts_dockerfiles(tmp_path) == (
+        True,
+        "All defined build contexts have a Dockerfile.",
+    )
+
+
+def test_check_docker_compose_build_contexts_dockerfiles_lists_missing_dockerfiles(
+    tmp_path,
+):
+    (tmp_path / "api").mkdir()
+    (tmp_path / "worker").mkdir()
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  api:\n"
+            "    build: ./api\n"
+            "  worker:\n"
+            "    build:\n"
+            "      context: ./worker\n"
+            "      dockerfile: Dockerfile.dev\n"
+            "  db:\n"
+            "    image: postgres\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_build_contexts_dockerfiles(tmp_path) == (
+        False,
+        "The following build contexts do not have a Dockerfile: "
+        f"api ({tmp_path / 'api' / 'Dockerfile'}), "
+        f"worker ({tmp_path / 'worker' / 'Dockerfile.dev'}).",
     )
