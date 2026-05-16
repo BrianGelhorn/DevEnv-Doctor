@@ -1,5 +1,6 @@
 from subprocess import TimeoutExpired, run
 
+
 def command_output(command: list[str]) -> tuple[int, str]:
     try:
         result = run(command,
