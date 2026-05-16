@@ -1,10 +1,12 @@
 from pathlib import Path
+
 import typer
 
 from devenv_doctor.checks.compose import (
     check_docker_compose_available,
     check_docker_compose_file_exists,
     check_docker_compose_services_section,
+    check_docker_compose_valid_build_or_image,
     check_docker_compose_yaml_syntax,
 )
 from devenv_doctor.checks.docker import (
@@ -19,9 +21,11 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
 @app.callback()
 def root() -> None:
     pass
+
 
 @app.command()
 def check(
@@ -42,12 +46,19 @@ def check(
         ("Docker Compose", lambda: check_docker_compose_available()),
         ("Compose file", lambda: check_docker_compose_file_exists(project_path)),
         ("Compose YAML", lambda: check_docker_compose_yaml_syntax(project_path)),
-        ("Compose services", lambda: check_docker_compose_services_section(project_path)),
+        (
+            "Compose services",
+            lambda: check_docker_compose_services_section(project_path),
+        ),
+        (
+            "Compose build",
+            lambda: check_docker_compose_valid_build_or_image(project_path),
+        ),
     ]
 
     typer.echo(f"Checking {project_path}")
     # TODO: Implement diferenciation of blocking, warning and recommended issue levels.
-    passed = 0  
+    passed = 0
     failed = 0
     docker_cli_available = True
 
@@ -64,16 +75,16 @@ def check(
 
         if ok:
             passed += 1
-            typer.secho(f"[PASS] {name}: {message}", fg='green')
+            typer.secho(f"[PASS] {name}: {message}", fg="green")
         else:
             failed += 1
-            typer.secho(f"[FAIL] {name}: {message}", fg='red')
+            typer.secho(f"[FAIL] {name}: {message}", fg="red")
 
     total = len(checks)
     status = "Ready" if failed == 0 else "Not Ready"
 
     typer.echo()
-    typer.secho(f"Status: {status}", fg='green' if status == "Ready" else 'red')
+    typer.secho(f"Status: {status}", fg="green" if status == "Ready" else "red")
     typer.echo(f"Summary: {passed}/{total} passed, {failed} failed.")
 
     if failed:
