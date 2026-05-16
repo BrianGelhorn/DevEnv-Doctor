@@ -46,7 +46,7 @@ def check(
     ]
 
     typer.echo(f"Checking {project_path}")
-    # TODO: Implement differenciation of blocking, warnign and recommended issue levels.
+    # TODO: Implement diferenciation of blocking, warning and recommended issue levels.
     passed = 0  
     failed = 0
     docker_cli_available = True
