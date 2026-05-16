@@ -5,11 +5,13 @@ import typer
 from devenv_doctor.checks.compose import (
     check_docker_compose_available,
     check_docker_compose_build_contexts,
+    check_docker_compose_build_contexts_dockerfiles,
     check_docker_compose_file_exists,
     check_docker_compose_services_section,
     check_docker_compose_valid_build_or_image,
     check_docker_compose_yaml_syntax,
 )
+from devenv_doctor.checks.compose_utils import has_build_services
 from devenv_doctor.checks.docker import (
     check_docker_cli_installed,
     check_docker_daemon_accessible,
@@ -59,6 +61,10 @@ def check(
             "Compose build contexts",
             lambda: check_docker_compose_build_contexts(project_path),
         ),
+        (
+            "Compose build context Dockerfiles",
+            lambda: check_docker_compose_build_contexts_dockerfiles(project_path),
+        ),
     ]
 
     typer.echo(f"Checking {project_path}")
@@ -102,6 +108,29 @@ def check(
                 f"[FAIL] {name}: skipped because Compose services are not valid."
             )
             continue
+        if name == "Compose build context Dockerfiles":
+            if not docker_compose_file_exists:
+                failed += 1
+                typer.echo(
+                    f"[FAIL] {name}: skipped because Compose file was not found."
+                )
+                continue
+            if not docker_compose_file_syntax_is_valid:
+                failed += 1
+                typer.echo(f"[FAIL] {name}: skipped because Compose YAML is not valid.")
+                continue
+            if not docker_compose_services_section_is_valid:
+                failed += 1
+                typer.echo(
+                    f"[FAIL] {name}: skipped because Compose services are not valid."
+                )
+                continue
+            if not has_build_services(project_path):
+                failed += 1
+                typer.echo(
+                    f"[FAIL] {name}: skipped because no service uses build."
+                )
+                continue
 
         ok, message = run_check()
 
