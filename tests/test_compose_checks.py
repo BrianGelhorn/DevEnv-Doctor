@@ -158,3 +158,109 @@ def test_check_docker_compose_valid_build_or_image_lists_invalid_services(tmp_pa
         False,
         "The following services have no build or image tag: web, worker.",
     )
+
+
+def test_get_build_context_accepts_string_build_config():
+    assert compose.get_build_context("./api") == "./api"
+
+
+def test_get_build_context_accepts_object_build_config():
+    assert compose.get_build_context({"context": "./api"}) == "./api"
+
+
+def test_get_build_context_defaults_object_context_to_current_directory():
+    assert compose.get_build_context({"dockerfile": "Dockerfile.dev"}) == "."
+
+
+def test_get_build_context_rejects_invalid_build_config():
+    assert compose.get_build_context(["./api"]) is None
+    assert compose.get_build_context({"context": ["./api"]}) is None
+
+
+def test_check_docker_compose_build_contexts_accepts_existing_contexts(tmp_path):
+    (tmp_path / "api").mkdir()
+    (tmp_path / "worker").mkdir()
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  api:\n"
+            "    build: ./api\n"
+            "  worker:\n"
+            "    build:\n"
+            "      context: ./worker\n"
+            "  db:\n"
+            "    image: postgres\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_build_contexts(tmp_path) == (
+        True,
+        "All defined build contexts exist.",
+    )
+
+
+def test_check_docker_compose_build_contexts_accepts_absolute_context(tmp_path):
+    absolute_context = tmp_path / "api"
+    absolute_context.mkdir()
+    write_compose_file(
+        tmp_path,
+        f"services:\n  api:\n    build: {absolute_context}\n",
+    )
+
+    assert compose.check_docker_compose_build_contexts(tmp_path) == (
+        True,
+        "All defined build contexts exist.",
+    )
+
+
+def test_check_docker_compose_build_contexts_uses_compose_file_parent(tmp_path):
+    project_path = tmp_path / "project"
+    project_path.mkdir()
+    (project_path / "api").mkdir()
+    write_compose_file(
+        project_path,
+        "services:\n  api:\n    build: ./api\n",
+    )
+
+    assert compose.check_docker_compose_build_contexts(project_path) == (
+        True,
+        "All defined build contexts exist.",
+    )
+
+
+def test_check_docker_compose_build_contexts_lists_missing_contexts(tmp_path):
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  api:\n"
+            "    build: ./api\n"
+            "  worker:\n"
+            "    build:\n"
+            "      context: ./worker\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_build_contexts(tmp_path) == (
+        False,
+        "The following build contexts do not exist: api (./api), worker (./worker).",
+    )
+
+
+def test_check_docker_compose_build_contexts_reports_invalid_contexts(tmp_path):
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  api:\n"
+            "    build:\n"
+            "      context:\n"
+            "        - ./api\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_build_contexts(tmp_path) == (
+        False,
+        "The following build contexts do not exist: api (invalid build context).",
+    )
