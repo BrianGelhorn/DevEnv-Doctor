@@ -299,6 +299,175 @@ def test_check_docker_compose_build_contexts_reports_invalid_contexts(tmp_path):
     )
 
 
+def test_check_docker_compose_duplicated_host_ports_accepts_unique_ports(tmp_path):
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '8080:80'\n"
+            "  api:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - target: 8000\n"
+            "        published: 8000\n"
+            "  worker:\n"
+            "    image: nginx\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_duplicated_host_ports(tmp_path) == (
+        True,
+        "All published host ports are unique.",
+    )
+
+
+def test_check_docker_compose_duplicated_host_ports_lists_duplicate_ports(tmp_path):
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '8080:80'\n"
+            "  api:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '127.0.0.1:8080:8000'\n"
+            "  worker:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - target: 9000\n"
+            "        published: 8080\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_duplicated_host_ports(tmp_path) == (
+        False,
+        "The following host ports are duplicated: "
+        "8080 (web, api), 8080 (web, worker).",
+    )
+
+
+def test_check_docker_compose_duplicated_host_ports_ignores_container_only_ports(
+    tmp_path,
+):
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '80'\n"
+            "  api:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '80'\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_duplicated_host_ports(tmp_path) == (
+        True,
+        "All published host ports are unique.",
+    )
+
+
+def test_check_docker_compose_host_ports_available_accepts_available_ports(
+    monkeypatch,
+    tmp_path,
+):
+    checked_ports = []
+    monkeypatch.setattr(
+        compose,
+        "_is_host_port_available",
+        lambda host_ip, host_port: checked_ports.append((host_ip, host_port)) or True,
+    )
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '8080:80'\n"
+            "  api:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - target: 8000\n"
+            "        published: 8000\n"
+            "  worker:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '80'\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_host_ports_available(tmp_path) == (
+        True,
+        "All published host ports are available.",
+    )
+    assert checked_ports == [(None, "8080"), (None, "8000")]
+
+
+def test_check_docker_compose_host_ports_available_lists_used_ports(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        compose,
+        "_is_host_port_available",
+        lambda host_ip, host_port: host_port != "8080",
+    )
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '8080:80'\n"
+            "  api:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '127.0.0.1:8000:8000'\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_host_ports_available(tmp_path) == (
+        False,
+        "The following host ports are already in use: web (8080).",
+    )
+
+
+def test_check_docker_compose_host_ports_available_reports_permission_denied(
+    monkeypatch,
+    tmp_path,
+):
+    def deny_port(host_ip, host_port):
+        raise PermissionError
+
+    monkeypatch.setattr(compose, "_is_host_port_available", deny_port)
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '443:443'\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_host_ports_available(tmp_path) == (
+        False,
+        "Insufficient permissions to inspect the following host ports: web (443).",
+    )
+
+
 def test_check_docker_compose_build_contexts_dockerfiles_accepts_default_dockerfile(
     tmp_path,
 ):

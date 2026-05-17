@@ -6,7 +6,9 @@ from devenv_doctor.checks.compose import (
     check_docker_compose_available,
     check_docker_compose_build_contexts,
     check_docker_compose_build_contexts_dockerfiles,
+    check_docker_compose_duplicated_host_ports,
     check_docker_compose_file_exists,
+    check_docker_compose_host_ports_available,
     check_docker_compose_services_section,
     check_docker_compose_valid_build_or_image,
     check_docker_compose_yaml_syntax,
@@ -62,6 +64,14 @@ def check(
             lambda: check_docker_compose_build_contexts(project_path),
         ),
         (
+            "Compose host ports",
+            lambda: check_docker_compose_duplicated_host_ports(project_path),
+        ),
+        (
+            "Host port availability",
+            lambda: check_docker_compose_host_ports_available(project_path),
+        ),
+        (
             "Compose build context Dockerfiles",
             lambda: check_docker_compose_build_contexts_dockerfiles(project_path),
         ),
@@ -86,21 +96,41 @@ def check(
             typer.echo(f"[FAIL] {name}: skipped because Compose file was not found.")
             continue
         if (
-            name in {"Compose services", "Compose build", "Compose build contexts"}
+            name
+            in {
+                "Compose services",
+                "Compose build",
+                "Compose build contexts",
+                "Compose host ports",
+                "Host port availability",
+            }
             and not docker_compose_file_exists
         ):
             failed += 1
             typer.echo(f"[FAIL] {name}: skipped because Compose file was not found.")
             continue
         if (
-            name in {"Compose services", "Compose build", "Compose build contexts"}
+            name
+            in {
+                "Compose services",
+                "Compose build",
+                "Compose build contexts",
+                "Compose host ports",
+                "Host port availability",
+            }
             and not docker_compose_file_syntax_is_valid
         ):
             failed += 1
             typer.echo(f"[FAIL] {name}: skipped because Compose YAML is not valid.")
             continue
         if (
-            name in {"Compose build", "Compose build contexts"}
+            name
+            in {
+                "Compose build",
+                "Compose build contexts",
+                "Compose host ports",
+                "Host port availability",
+            }
             and not docker_compose_services_section_is_valid
         ):
             failed += 1

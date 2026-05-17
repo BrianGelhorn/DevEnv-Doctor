@@ -12,9 +12,9 @@
 - FR-008: The CLI must validate that the `services` section exists and is not empty. ✅
 - FR-009: The CLI must validate that each service has a valid `image` or `build`. ✅
 - FR-010: The CLI must validate that build contexts referenced by Compose services exist. ✅
-- FR-011: The CLI must validate that Dockerfile exists for services using build. 
-- FR-012: The CLI must detect duplicated host ports. 
-- FR-013: The CLI must detect if the port is already being used by another process. 
+- FR-011: The CLI must validate that Dockerfile exists for services using build. ✅
+- FR-012: The CLI must detect duplicated host ports. ✅
+- FR-013: The CLI must detect if the port is already being used by another process. ✅
 - FR-014: The CLI must check `.env.example` when environment variables are used.
 - FR-015: The CLI must show a local readiness status.
 - FR-016: The CLI must show warnings, failures and recommendations.

@@ -1,3 +1,4 @@
+import socket
 from pathlib import Path
 
 from devenv_doctor.checks.compose_utils import (
@@ -8,6 +9,33 @@ from devenv_doctor.checks.compose_utils import (
     resolve_build_context,
 )
 from devenv_doctor.core import command_output
+
+
+def _get_published_host_port(port: object) -> tuple[str | None, str | None]:
+    if isinstance(port, str):
+        port_parts = port.rsplit(":", 2)
+        if len(port_parts) == 2:
+            return None, port_parts[0]
+        if len(port_parts) == 3:
+            return port_parts[0].strip("[]"), port_parts[1]
+    elif isinstance(port, dict):
+        published = port.get("published")
+        if published is not None:
+            host_ip = port.get("host_ip")
+            return str(host_ip) if host_ip is not None else None, str(published)
+
+    return None, None
+
+
+def _is_host_port_available(host_ip: str | None, host_port: str) -> bool:
+    port = int(host_port)
+    host = host_ip or ""
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+
+    with socket.socket(family, socket.SOCK_STREAM) as probe:
+        probe.bind((host, port))
+
+    return True
 
 
 def check_docker_compose_available() -> tuple[bool, str]:
@@ -176,3 +204,96 @@ def check_docker_compose_build_contexts_dockerfiles(
         )
 
     return True, "All defined build contexts have a Dockerfile."
+
+
+def check_docker_compose_duplicated_host_ports(project_path: Path) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path)
+    # This should not run since the check_docker_compose_file_exists function
+    # should be called before.
+    if compose_file is None:
+        return False, "No Docker Compose file was found."
+
+    parsed_yaml = parse_yaml_file(compose_file)
+
+    # This should not run since the check_docker_compose_yaml_syntax function
+    # should be called before.
+    if parsed_yaml is None:
+        return False, "Docker Compose file YAML has syntax errors."
+
+    host_ports: dict[str, str] = {}
+    duplicated_host_ports: list[str] = []
+
+    for service_name, service_config in parsed_yaml["services"].items():
+        if not isinstance(service_config, dict) or "ports" not in service_config:
+            continue
+
+        for port in service_config["ports"]:
+            _, host_port = _get_published_host_port(port)
+            if not host_port:
+                continue
+
+            existing_service = host_ports.get(host_port)
+            if existing_service is not None:
+                duplicated_host_ports.append(
+                    f"{host_port} ({existing_service}, {service_name})"
+                )
+                continue
+
+            host_ports[host_port] = service_name
+
+    if duplicated_host_ports:
+        duplicated = ", ".join(duplicated_host_ports)
+        return False, f"The following host ports are duplicated: {duplicated}."
+
+    return True, "All published host ports are unique."
+
+
+def check_docker_compose_host_ports_available(project_path: Path) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path)
+    # This should not run since the check_docker_compose_file_exists function
+    # should be called before.
+    if compose_file is None:
+        return False, "No Docker Compose file was found."
+
+    parsed_yaml = parse_yaml_file(compose_file)
+
+    # This should not run since the check_docker_compose_yaml_syntax function
+    # should be called before.
+    if parsed_yaml is None:
+        return False, "Docker Compose file YAML has syntax errors."
+
+    unavailable_host_ports: list[str] = []
+    permission_denied_host_ports: list[str] = []
+
+    for service_name, service_config in parsed_yaml["services"].items():
+        if not isinstance(service_config, dict) or "ports" not in service_config:
+            continue
+
+        for port in service_config["ports"]:
+            host_ip, host_port = _get_published_host_port(port)
+            if not host_port:
+                continue
+
+            try:
+                if not _is_host_port_available(host_ip, host_port):
+                    unavailable_host_ports.append(f"{service_name} ({host_port})")
+            except PermissionError:
+                permission_denied_host_ports.append(f"{service_name} ({host_port})")
+            except OSError:
+                unavailable_host_ports.append(f"{service_name} ({host_port})")
+            except ValueError:
+                continue
+
+    if permission_denied_host_ports:
+        ports = ", ".join(permission_denied_host_ports)
+        return (
+            False,
+            "Insufficient permissions to inspect the following host ports: "
+            f"{ports}.",
+        )
+
+    if unavailable_host_ports:
+        ports = ", ".join(unavailable_host_ports)
+        return False, f"The following host ports are already in use: {ports}."
+
+    return True, "All published host ports are available."
