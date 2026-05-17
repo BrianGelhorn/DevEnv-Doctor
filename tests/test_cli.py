@@ -261,7 +261,11 @@ def test_check_command_exits_2_when_custom_compose_file_is_missing(
     assert "Docker Compose file does not exist" in result.output
 
 
-def test_check_command_exits_2_when_compose_file_path_is_not_provided(tmp_path):
+def test_check_command_exits_2_when_compose_file_path_is_not_provided(
+    monkeypatch, 
+    tmp_path,
+):
+    monkeypatch.setenv("TYPER_USE_RICH", "0")
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--compose"], color=False)
 
     assert result.exit_code == 2
