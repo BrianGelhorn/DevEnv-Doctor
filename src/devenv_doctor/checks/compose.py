@@ -1,41 +1,15 @@
-import socket
 from pathlib import Path
 
 from devenv_doctor.checks.compose_utils import (
     find_compose_file,
     get_build_context,
     get_build_dockerfile,
+    get_published_host_port,
+    is_host_port_available,
     parse_yaml_file,
     resolve_build_context,
 )
 from devenv_doctor.core import command_output
-
-
-def _get_published_host_port(port: object) -> tuple[str | None, str | None]:
-    if isinstance(port, str):
-        port_parts = port.rsplit(":", 2)
-        if len(port_parts) == 2:
-            return None, port_parts[0]
-        if len(port_parts) == 3:
-            return port_parts[0].strip("[]"), port_parts[1]
-    elif isinstance(port, dict):
-        published = port.get("published")
-        if published is not None:
-            host_ip = port.get("host_ip")
-            return str(host_ip) if host_ip is not None else None, str(published)
-
-    return None, None
-
-
-def _is_host_port_available(host_ip: str | None, host_port: str) -> bool:
-    port = int(host_port)
-    host = host_ip or ""
-    family = socket.AF_INET6 if ":" in host else socket.AF_INET
-
-    with socket.socket(family, socket.SOCK_STREAM) as probe:
-        probe.bind((host, port))
-
-    return True
 
 
 def check_docker_compose_available() -> tuple[bool, str]:
@@ -247,7 +221,7 @@ def check_docker_compose_duplicated_host_ports(
             continue
 
         for port in service_config["ports"]:
-            _, host_port = _get_published_host_port(port)
+            _, host_port = get_published_host_port(port)
             if not host_port:
                 continue
 
@@ -292,12 +266,12 @@ def check_docker_compose_host_ports_available(
             continue
 
         for port in service_config["ports"]:
-            host_ip, host_port = _get_published_host_port(port)
+            host_ip, host_port = get_published_host_port(port)
             if not host_port:
                 continue
 
             try:
-                if not _is_host_port_available(host_ip, host_port):
+                if not is_host_port_available(host_ip, host_port):
                     unavailable_host_ports.append(f"{service_name} ({host_port})")
             except PermissionError:
                 permission_denied_host_ports.append(f"{service_name} ({host_port})")

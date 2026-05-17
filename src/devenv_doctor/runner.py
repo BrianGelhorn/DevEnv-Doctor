@@ -22,6 +22,8 @@ from devenv_doctor.checks.docker import (
 from devenv_doctor.checks.environment import (
     check_env_example_exists,
     check_env_variables_match,
+)
+from devenv_doctor.checks.environment_utils import (
     has_env_example_file,
     has_env_file,
 )

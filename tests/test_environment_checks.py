@@ -1,4 +1,4 @@
-from devenv_doctor.checks import environment
+from devenv_doctor.checks import environment, environment_utils
 
 
 def test_has_env_file_detects_env_file(tmp_path):
@@ -7,21 +7,21 @@ def test_has_env_file_detects_env_file(tmp_path):
         encoding="utf-8",
     )
 
-    assert environment.has_env_file(tmp_path) is True
+    assert environment_utils.has_env_file(tmp_path) is True
 
 
 def test_has_env_file_rejects_missing_env_file(tmp_path):
-    assert environment.has_env_file(tmp_path) is False
+    assert environment_utils.has_env_file(tmp_path) is False
 
 
 def test_has_env_example_file_detects_env_example_file(tmp_path):
     (tmp_path / ".env.example").write_text("DATABASE_URL=\n", encoding="utf-8")
 
-    assert environment.has_env_example_file(tmp_path) is True
+    assert environment_utils.has_env_example_file(tmp_path) is True
 
 
 def test_has_env_example_file_rejects_missing_env_example_file(tmp_path):
-    assert environment.has_env_example_file(tmp_path) is False
+    assert environment_utils.has_env_example_file(tmp_path) is False
 
 
 def test_check_env_example_exists_passes_when_env_example_exists(tmp_path):

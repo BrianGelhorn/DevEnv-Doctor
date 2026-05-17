@@ -1,3 +1,4 @@
+import socket
 from pathlib import Path
 
 import yaml
@@ -76,3 +77,30 @@ def resolve_build_context(compose_file: Path, context: str) -> Path:
     if context_path.is_absolute():
         return context_path
     return compose_file.parent / context_path
+
+
+def get_published_host_port(port: object) -> tuple[str | None, str | None]:
+    if isinstance(port, str):
+        port_parts = port.rsplit(":", 2)
+        if len(port_parts) == 2:
+            return None, port_parts[0]
+        if len(port_parts) == 3:
+            return port_parts[0].strip("[]"), port_parts[1]
+    elif isinstance(port, dict):
+        published = port.get("published")
+        if published is not None:
+            host_ip = port.get("host_ip")
+            return str(host_ip) if host_ip is not None else None, str(published)
+
+    return None, None
+
+
+def is_host_port_available(host_ip: str | None, host_port: str) -> bool:
+    port = int(host_port)
+    host = host_ip or ""
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+
+    with socket.socket(family, socket.SOCK_STREAM) as probe:
+        probe.bind((host, port))
+
+    return True

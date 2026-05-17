@@ -1,18 +1,10 @@
 from pathlib import Path
 
-from dotenv import dotenv_values
-
-
-def has_env_file(project_path: Path) -> bool:
-    return (project_path / ".env").is_file()
-
-
-def has_env_example_file(project_path: Path) -> bool:
-    return (project_path / ".env.example").is_file()
-
-
-def _parse_env_keys(env_file: Path) -> set[str]:
-    return set(dotenv_values(env_file).keys())
+from devenv_doctor.checks.environment_utils import (
+    has_env_example_file,
+    has_env_file,
+    parse_env_keys,
+)
 
 
 def check_env_example_exists(project_path: Path) -> tuple[bool, str]:
@@ -31,8 +23,8 @@ def check_env_variables_match(project_path: Path) -> tuple[bool, str]:
     if not has_env_example_file(project_path):
         return False, ".env.example file was not found."
 
-    env_keys = _parse_env_keys(project_path / ".env")
-    env_example_keys = _parse_env_keys(project_path / ".env.example")
+    env_keys = parse_env_keys(project_path / ".env")
+    env_example_keys = parse_env_keys(project_path / ".env.example")
 
     missing_in_example = sorted(env_keys - env_example_keys)
     extra_in_example = sorted(env_example_keys - env_keys)

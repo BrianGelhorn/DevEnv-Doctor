@@ -432,7 +432,7 @@ def test_check_docker_compose_host_ports_available_accepts_available_ports(
     checked_ports = []
     monkeypatch.setattr(
         compose,
-        "_is_host_port_available",
+        "is_host_port_available",
         lambda host_ip, host_port: checked_ports.append((host_ip, host_port)) or True,
     )
     write_compose_file(
@@ -468,7 +468,7 @@ def test_check_docker_compose_host_ports_available_lists_used_ports(
 ):
     monkeypatch.setattr(
         compose,
-        "_is_host_port_available",
+        "is_host_port_available",
         lambda host_ip, host_port: host_port != "8080",
     )
     write_compose_file(
@@ -499,7 +499,7 @@ def test_check_docker_compose_host_ports_available_reports_permission_denied(
     def deny_port(host_ip, host_port):
         raise PermissionError
 
-    monkeypatch.setattr(compose, "_is_host_port_available", deny_port)
+    monkeypatch.setattr(compose, "is_host_port_available", deny_port)
     write_compose_file(
         tmp_path,
         (
@@ -526,7 +526,7 @@ def test_check_docker_compose_host_ports_available_reports_permission_denied_onc
             raise PermissionError
         return True
 
-    monkeypatch.setattr(compose, "_is_host_port_available", deny_port)
+    monkeypatch.setattr(compose, "is_host_port_available", deny_port)
     write_compose_file(
         tmp_path,
         (
