@@ -27,7 +27,7 @@
 - FR-023: The CLI must be able to run only the specified checks by the developer. ✅
 - FR-024: The CLI must be able to specify a custom Docker Compose file to run the analysis with. ✅
 - FR-025: The CLI must be able to filter and display only the selected severity levels. ✅
-- FR-026: The CLI must show how to use the tool correctly.
+- FR-026: The CLI must show how to use the tool correctly. ✅
 
 ## Non-Functional Requirements
 

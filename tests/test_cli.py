@@ -109,6 +109,41 @@ def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path)
     assert "Summary: 3/3 passed, 0 failed, 0 skipped." in result.output
 
 
+def test_root_help_shows_basic_examples_and_accepted_values():
+    result = runner.invoke(cli.app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "Basic examples:" in result.output
+    assert "devenv-doctor check ." in result.output
+    assert "devenv-doctor check . --only docker,env" in result.output
+    assert "Check groups: docker, network, env" in result.output
+    assert "Severity levels: Critical, Warning, Recommendations" in result.output
+
+
+def test_check_help_shows_options_values_and_examples():
+    result = runner.invoke(cli.app, ["check", "--help"])
+
+    assert result.exit_code == 0
+    assert "--report [PATH]" in result.output
+    assert "--only GROUPS" in result.output
+    assert "--compose FILE" in result.output
+    assert "--severity LEVELS" in result.output
+    assert "Accepted check groups:" in result.output
+    assert (
+        "docker    Docker CLI, daemon, Compose, Compose file and build checks"
+        in result.output
+    )
+    assert "Accepted severity levels:" in result.output
+    assert "Critical             Blocking failures" in result.output
+    assert "Warning              Failed rules marked Severity: Warning" in result.output
+    assert (
+        "Recommendations      Failed rules marked Severity: Recommendation"
+        in result.output
+    )
+    assert "devenv-doctor check ./api --compose docker-compose.dev.yml" in result.output
+    assert "devenv-doctor check . --severity Critical,Recommendations" in result.output
+
+
 def test_check_command_reports_skips_separately(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "run_checks", run_not_ready)
 

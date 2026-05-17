@@ -13,9 +13,26 @@ from devenv_doctor.runner import (
 
 app = typer.Typer(
     name="devenv-doctor",
-    help="Analyze local Docker development environments.",
+    help=(
+        "Analyze local Docker development environments and report whether a "
+        "project is ready to run."
+    ),
+    epilog=(
+        "\b\n"
+        "Basic examples:\n"
+        "  devenv-doctor check .\n"
+        "  devenv-doctor check ./my-project --report\n"
+        "  devenv-doctor check . --only docker,env\n"
+        "  devenv-doctor check . --severity Critical,Warning\n\n"
+        "\b\n"
+        "Useful values:\n"
+        "  Check groups: docker, network, env\n"
+        "  Severity levels: Critical, Warning, Recommendations\n\n"
+        "Run 'devenv-doctor check --help' for the full check command options."
+    ),
     add_completion=False,
     no_args_is_help=True,
+    rich_markup_mode=None,
 )
 
 DEFAULT_REPORT_FILENAME = "devenv-doctor-report.json"
@@ -203,6 +220,33 @@ def _parse_severity(severity: str | None) -> set[str] | None:
 
 @app.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    epilog=(
+        "\b\n"
+        "Options:\n"
+        "  --report [PATH]       Write a JSON report. If PATH is omitted, writes "
+        "devenv-doctor-report.json in the project path.\n"
+        "  --only GROUPS         Run only comma-separated check groups.\n"
+        "  --compose FILE        Use a specific Docker Compose file.\n"
+        "  --severity LEVELS     Display only comma-separated issue severities.\n\n"
+        "\b\n"
+        "Accepted check groups:\n"
+        "  docker    Docker CLI, daemon, Compose, Compose file and build checks\n"
+        "  network   Duplicated host ports and local host port availability\n"
+        "  env       .env.example presence and .env/.env.example parity\n\n"
+        "\b\n"
+        "Accepted severity levels:\n"
+        "  Critical             Blocking failures\n"
+        "  Warning              Failed rules marked Severity: Warning\n"
+        "  Recommendations      Failed rules marked Severity: Recommendation\n\n"
+        "\b\n"
+        "Basic examples:\n"
+        "  devenv-doctor check .\n"
+        "  devenv-doctor check ./api --compose docker-compose.dev.yml\n"
+        "  devenv-doctor check . --report\n"
+        "  devenv-doctor check . --report reports/dev-report.json\n"
+        "  devenv-doctor check . --only docker,network\n"
+        "  devenv-doctor check . --severity Critical,Recommendations"
+    ),
 )
 def check(
     ctx: typer.Context,
@@ -218,7 +262,11 @@ def check(
     report: bool = typer.Option(
         False,
         "--report",
-        help="Generate a JSON report. Optionally pass a report path after the flag.",
+        help=(
+            "Generate a JSON report. Optionally pass a report path after the "
+            "flag."
+        ),
+        rich_help_panel="Output",
     ),
     only: str | None = typer.Option(
         None,
@@ -227,11 +275,15 @@ def check(
             "Run only the comma-separated check groups provided: "
             "docker, network, env."
         ),
+        metavar="GROUPS",
+        rich_help_panel="Filters",
     ),
     compose: str | None = typer.Option(
         None,
         "--compose",
         help="Use a custom Docker Compose file path.",
+        metavar="FILE",
+        rich_help_panel="Input",
     ),
     severity: str | None = typer.Option(
         None,
@@ -240,6 +292,8 @@ def check(
             "Display only the comma-separated issue severity levels provided: "
             "Critical, Warning, Recommendations."
         ),
+        metavar="LEVELS",
+        rich_help_panel="Filters",
     ),
 ) -> None:
     """Run the development environment checks."""
