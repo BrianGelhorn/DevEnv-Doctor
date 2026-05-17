@@ -28,6 +28,28 @@ from devenv_doctor.checks.environment import (
 
 CheckStatus = Literal["pass", "fail", "skip"]
 
+CHECK_GROUPS = {
+    "docker": {
+        "Docker CLI",
+        "Docker daemon",
+        "Docker Compose",
+        "Compose file",
+        "Compose YAML",
+        "Compose services",
+        "Compose build",
+        "Compose build contexts",
+        "Compose build context Dockerfiles",
+    },
+    "network": {
+        "Compose host ports",
+        "Host port availability",
+    },
+    "env": {
+        "Environment example",
+        "Environment variables",
+    },
+}
+
 
 @dataclass(frozen=True)
 class CheckResult:
@@ -80,8 +102,66 @@ class CheckRun:
         return 1 if self.failed else 0
 
 
-def run_checks(project_path: Path) -> CheckRun:
-    checks: list[tuple[str, Callable[[], tuple[bool, str]]]] = [
+def get_check_names() -> tuple[str, ...]:
+    return tuple(name for name, _ in _build_checks(Path(".")))
+
+
+def get_check_groups() -> tuple[str, ...]:
+    return tuple(CHECK_GROUPS)
+
+
+def expand_check_groups(groups: set[str]) -> set[str]:
+    checks: set[str] = set()
+    for group in groups:
+        checks.update(CHECK_GROUPS[group])
+    return checks
+
+
+def run_checks(project_path: Path, only: set[str] | None = None) -> CheckRun:
+    checks = _build_checks(project_path)
+
+    if only is not None:
+        checks = [(name, run_check) for name, run_check in checks if name in only]
+
+    results: list[CheckResult] = []
+    docker_cli_available = True
+    docker_compose_file_exists = True
+    docker_compose_file_syntax_is_valid = True
+    docker_compose_services_section_is_valid = True
+
+    for name, run_check in checks:
+        skip_message = _get_skip_message(
+            name,
+            project_path,
+            docker_cli_available,
+            docker_compose_file_exists,
+            docker_compose_file_syntax_is_valid,
+            docker_compose_services_section_is_valid,
+        )
+        if skip_message is not None:
+            results.append(CheckResult(name, "skip", skip_message))
+            continue
+
+        ok, message = run_check()
+        status: CheckStatus = "pass" if ok else "fail"
+        results.append(CheckResult(name, status, message))
+
+        if name == "Docker CLI":
+            docker_cli_available = ok
+        elif name == "Compose file":
+            docker_compose_file_exists = ok
+        elif name == "Compose YAML":
+            docker_compose_file_syntax_is_valid = ok
+        elif name == "Compose services":
+            docker_compose_services_section_is_valid = ok
+
+    return CheckRun(results)
+
+
+def _build_checks(
+    project_path: Path,
+) -> list[tuple[str, Callable[[], tuple[bool, str]]]]:
+    return [
         ("Docker CLI", lambda: check_docker_cli_installed()),
         ("Docker daemon", lambda: check_docker_daemon_accessible()),
         ("Docker Compose", lambda: check_docker_compose_available()),
@@ -120,40 +200,6 @@ def run_checks(project_path: Path) -> CheckRun:
             lambda: check_env_variables_match(project_path),
         ),
     ]
-
-    results: list[CheckResult] = []
-    docker_cli_available = True
-    docker_compose_file_exists = True
-    docker_compose_file_syntax_is_valid = True
-    docker_compose_services_section_is_valid = True
-
-    for name, run_check in checks:
-        skip_message = _get_skip_message(
-            name,
-            project_path,
-            docker_cli_available,
-            docker_compose_file_exists,
-            docker_compose_file_syntax_is_valid,
-            docker_compose_services_section_is_valid,
-        )
-        if skip_message is not None:
-            results.append(CheckResult(name, "skip", skip_message))
-            continue
-
-        ok, message = run_check()
-        status: CheckStatus = "pass" if ok else "fail"
-        results.append(CheckResult(name, status, message))
-
-        if name == "Docker CLI":
-            docker_cli_available = ok
-        elif name == "Compose file":
-            docker_compose_file_exists = ok
-        elif name == "Compose YAML":
-            docker_compose_file_syntax_is_valid = ok
-        elif name == "Compose services":
-            docker_compose_services_section_is_valid = ok
-
-    return CheckRun(results)
 
 
 def _get_skip_message(

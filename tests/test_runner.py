@@ -199,3 +199,51 @@ def test_run_checks_skips_environment_checks_without_env_file(monkeypatch, tmp_p
         "skip",
         "skipped because .env file was not found.",
     )
+
+
+def test_run_checks_runs_only_selected_checks(monkeypatch, tmp_path):
+    patch_all_checks_passing(monkeypatch)
+    monkeypatch.setattr(runner, "check_docker_compose_available", fail_if_called)
+
+    run = runner.run_checks(tmp_path, only={"Docker CLI", "Compose file"})
+
+    assert run.status == "Ready"
+    assert run.total == 2
+    assert run.passed == 2
+    assert [result.name for result in run.results] == ["Docker CLI", "Compose file"]
+
+
+def test_expand_check_groups_returns_group_checks():
+    assert runner.expand_check_groups({"network"}) == {
+        "Compose host ports",
+        "Host port availability",
+    }
+
+
+def test_get_check_groups_lists_public_only_groups():
+    assert runner.get_check_groups() == ("docker", "network", "env")
+
+
+def test_run_checks_applies_skips_within_selected_checks(monkeypatch, tmp_path):
+    patch_all_checks_passing(monkeypatch)
+    monkeypatch.setattr(
+        runner,
+        "check_docker_cli_installed",
+        lambda: (False, "Docker CLI is not installed."),
+    )
+    monkeypatch.setattr(runner, "check_docker_daemon_accessible", fail_if_called)
+
+    run = runner.run_checks(tmp_path, only={"Docker CLI", "Docker daemon"})
+
+    assert run.status == "Not Ready"
+    assert run.passed == 0
+    assert run.failed == 1
+    assert run.skipped == 1
+    assert run.results == [
+        runner.CheckResult("Docker CLI", "fail", "Docker CLI is not installed."),
+        runner.CheckResult(
+            "Docker daemon",
+            "skip",
+            "skipped because Docker CLI is not installed.",
+        ),
+    ]

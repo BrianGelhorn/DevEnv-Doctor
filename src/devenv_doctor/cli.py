@@ -3,7 +3,12 @@ from pathlib import Path
 
 import typer
 
-from devenv_doctor.runner import CheckRun, run_checks
+from devenv_doctor.runner import (
+    CheckRun,
+    expand_check_groups,
+    get_check_groups,
+    run_checks,
+)
 
 app = typer.Typer(
     name="devenv-doctor",
@@ -80,6 +85,30 @@ def _print_result_line(status: str, name: str, message: str) -> None:
         typer.echo(f"[SKIP] {name}: {message}")
 
 
+def _parse_only(only: str | None) -> set[str] | None:
+    if only is None:
+        return None
+
+    selected_groups = {group.strip() for group in only.split(",")}
+    selected_groups.discard("")
+    available_groups = set(get_check_groups())
+    invalid_groups = sorted(selected_groups - available_groups)
+
+    if invalid_groups:
+        typer.secho(
+            f"Invalid check group(s): {', '.join(invalid_groups)}",
+            fg="red",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    if not selected_groups:
+        typer.secho("No check groups were provided for --only.", fg="red", err=True)
+        raise typer.Exit(code=2)
+
+    return expand_check_groups(selected_groups)
+
+
 @app.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
@@ -99,9 +128,18 @@ def check(
         "--report",
         help="Generate a JSON report. Optionally pass a report path after the flag.",
     ),
+    only: str | None = typer.Option(
+        None,
+        "--only",
+        help=(
+            "Run only the comma-separated check groups provided: "
+            "docker, network, env."
+        ),
+    ),
 ) -> None:
     """Run the development environment checks."""
     report_path = _resolve_report_path(project_path, ctx.args[0] if ctx.args else None)
+    selected_checks = _parse_only(only)
 
     if ctx.args and not report:
         typer.secho(f"Unexpected argument: {ctx.args[0]}", fg="red", err=True)
@@ -111,7 +149,7 @@ def check(
         raise typer.Exit(code=2)
 
     typer.echo(f"Checking {project_path}")
-    run = run_checks(project_path)
+    run = run_checks(project_path, only=selected_checks)
 
     for result in run.results:
         _print_result_line(result.status, result.name, result.message)

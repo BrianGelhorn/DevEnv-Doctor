@@ -18,6 +18,21 @@ def ready_run() -> CheckRun:
     )
 
 
+def filtered_ready_run(project_path, only=None) -> CheckRun:
+    results = [
+        CheckResult("Docker CLI", "pass", "ok"),
+        CheckResult("Docker daemon", "pass", "ok"),
+        CheckResult("Docker Compose", "pass", "ok"),
+        CheckResult("Compose host ports", "pass", "ok"),
+        CheckResult("Host port availability", "pass", "ok"),
+        CheckResult("Environment example", "pass", "ok"),
+        CheckResult("Environment variables", "pass", "ok"),
+    ]
+    if only is not None:
+        results = [result for result in results if result.name in only]
+    return CheckRun(results)
+
+
 def not_ready_run() -> CheckRun:
     return CheckRun(
         [
@@ -33,7 +48,7 @@ def not_ready_run() -> CheckRun:
 
 
 def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -44,7 +59,11 @@ def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path)
 
 
 def test_check_command_reports_skips_separately(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: not_ready_run())
+    monkeypatch.setattr(
+        cli,
+        "run_checks",
+        lambda project_path, only=None: not_ready_run(),
+    )
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -62,7 +81,7 @@ def test_check_command_does_not_write_report_without_report_flag(
     monkeypatch,
     tmp_path,
 ):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -71,7 +90,7 @@ def test_check_command_does_not_write_report_without_report_flag(
 
 
 def test_check_command_writes_default_json_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--report"])
 
@@ -100,7 +119,7 @@ def test_check_command_writes_default_json_report(monkeypatch, tmp_path):
 
 
 def test_check_command_writes_custom_json_report_name(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--report", "result.json"])
 
@@ -113,7 +132,7 @@ def test_check_command_writes_custom_json_report_name(monkeypatch, tmp_path):
 
 
 def test_check_command_writes_custom_json_report_path(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
     report_dir = tmp_path / "reports"
     report_dir.mkdir()
     report_file = report_dir / "result.json"
@@ -130,7 +149,11 @@ def test_check_command_writes_custom_json_report_path(monkeypatch, tmp_path):
 
 
 def test_check_command_reports_not_ready_in_json_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: not_ready_run())
+    monkeypatch.setattr(
+        cli,
+        "run_checks",
+        lambda project_path, only=None: not_ready_run(),
+    )
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--report"])
 
@@ -150,7 +173,7 @@ def test_check_command_exits_2_when_report_parent_path_does_not_exist(
     monkeypatch,
     tmp_path,
 ):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(
         cli.app,
@@ -163,7 +186,7 @@ def test_check_command_exits_2_when_report_parent_path_does_not_exist(
 
 
 def test_check_command_rejects_extra_argument_without_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "unexpected.json"])
 
@@ -172,7 +195,7 @@ def test_check_command_rejects_extra_argument_without_report(monkeypatch, tmp_pa
 
 
 def test_check_command_rejects_multiple_report_arguments(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path: ready_run())
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
 
     result = runner.invoke(
         cli.app,
@@ -181,3 +204,111 @@ def test_check_command_rejects_multiple_report_arguments(monkeypatch, tmp_path):
 
     assert result.exit_code == 2
     assert "Unexpected argument: two.json" in result.output
+
+
+def test_check_command_runs_only_selected_checks(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run_checks(project_path, only=None):
+        calls.append(only)
+        return filtered_ready_run(project_path, only=only)
+
+    monkeypatch.setattr(cli, "run_checks", fake_run_checks)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--only", "docker"],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [
+        {
+            "Docker CLI",
+            "Docker daemon",
+            "Docker Compose",
+            "Compose file",
+            "Compose YAML",
+            "Compose services",
+            "Compose build",
+            "Compose build contexts",
+            "Compose build context Dockerfiles",
+        }
+    ]
+    assert "[PASS] Docker CLI: ok" in result.output
+    assert "[PASS] Docker Compose: ok" in result.output
+    assert "[PASS] Docker daemon: ok" in result.output
+    assert "Summary: 3/3 passed, 0 failed, 0 skipped." in result.output
+
+
+def test_check_command_rejects_invalid_only_group(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--only", "docker,nope"],
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid check group(s): nope" in result.output
+
+
+def test_check_command_rejects_empty_only_value(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path), "--only", ","])
+
+    assert result.exit_code == 2
+    assert "No check groups were provided for --only." in result.output
+
+
+def test_check_command_writes_report_for_only_checks(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", filtered_ready_run)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--only", "network", "--report"],
+    )
+    report_file = tmp_path / cli.DEFAULT_REPORT_FILENAME
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+
+    assert result.exit_code == 0
+    assert report["summary"] == {"total": 2, "passed": 2, "failed": 0, "skipped": 0}
+    assert report["checks"] == [
+        {"name": "Compose host ports", "status": "pass", "message": "ok"},
+        {"name": "Host port availability", "status": "pass", "message": "ok"},
+    ]
+
+
+def test_check_command_accepts_multiple_only_groups(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run_checks(project_path, only=None):
+        calls.append(only)
+        return filtered_ready_run(project_path, only=only)
+
+    monkeypatch.setattr(cli, "run_checks", fake_run_checks)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--only", "docker,env"],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [
+        {
+            "Docker CLI",
+            "Docker daemon",
+            "Docker Compose",
+            "Compose file",
+            "Compose YAML",
+            "Compose services",
+            "Compose build",
+            "Compose build contexts",
+            "Compose build context Dockerfiles",
+            "Environment example",
+            "Environment variables",
+        }
+    ]
+    assert "[PASS] Docker CLI: ok" in result.output
+    assert "[PASS] Environment example: ok" in result.output
+    assert "Host port availability" not in result.output
