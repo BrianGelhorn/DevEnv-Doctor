@@ -26,6 +26,15 @@ It supports:
 - Returning meaningful exit codes.
 - Displaying help information for CLI usage.
 
+## Installation
+
+```bash
+curl -L -o devenv-doctor-linux-amd64 \
+  https://github.com/BrianGelhorn/devenv-doctor/releases/latest/download/devenv-doctor-linux-amd64
+chmod +x devenv-doctor-linux-amd64
+sudo mv devenv-doctor-linux-amd64 /usr/local/bin/devenv-doctor
+```
+Then execute `devenv-doctor --help` to check if it was installed succesfully.
 ## Basic usage
 
 ```bash
