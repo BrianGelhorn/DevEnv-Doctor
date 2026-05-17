@@ -1,11 +1,10 @@
 import json
+import re
 
 from typer.testing import CliRunner
 
 from devenv_doctor import cli
 from devenv_doctor.runner import CheckResult, CheckRun
-
-import re
 
 runner = CliRunner()
 
