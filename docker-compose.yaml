@@ -1,0 +1,7 @@
+services:
+  devenv-doctor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devenv-doctor:latest
+    container_name: devenv-doctor

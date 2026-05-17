@@ -100,7 +100,6 @@ At least one accepted Compose file exists in the target project path.
 
 No accepted Compose file is in the target project path.
 
-
 ### Recommendation
 
 Create a valid Docker Compose file or, if one already exists, rename it to one of the accepted filenames.
@@ -316,7 +315,7 @@ Create a `.env.example` file with the same variables defined in the `.env` file 
 ## ENV-002 - `.env` and `.env.example` variables match
 
 **Category:** Environment  
-**Severity:** Recommendation  
+**Severity:** Warning  
 **Related requirement:** FR-021
 
 ### Description

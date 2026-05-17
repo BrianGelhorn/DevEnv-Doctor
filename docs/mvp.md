@@ -43,7 +43,6 @@ CLI command `devenv-doctor check .` that checks a Docker Compose project and the
 ## Out of Scope
 
 - GitHub Action integration.
-- JSON reports.
 - Markdown reports.
 - SARIF reports.
 - Auto-fix.
