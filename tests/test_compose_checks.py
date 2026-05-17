@@ -47,12 +47,38 @@ def test_find_compose_file_uses_supported_filename_priority(tmp_path):
     assert compose_utils.find_compose_file(tmp_path) == expected
 
 
+def test_find_compose_file_accepts_custom_compose_file(tmp_path):
+    write_compose_file(tmp_path, "services: {}\n", filename="compose.yaml")
+    custom_compose_file = write_compose_file(
+        tmp_path,
+        "services:\n  web:\n    image: nginx\n",
+        filename="custom.compose.yaml",
+    )
+
+    assert compose_utils.find_compose_file(tmp_path, custom_compose_file) == (
+        custom_compose_file
+    )
+
+
 def test_check_docker_compose_file_exists_when_file_is_present(tmp_path):
     write_compose_file(tmp_path, "services: {}\n", filename="docker-compose.yml")
 
     assert compose.check_docker_compose_file_exists(tmp_path) == (
         True,
         "Docker Compose file found: docker-compose.yml",
+    )
+
+
+def test_check_docker_compose_file_exists_uses_custom_compose_file(tmp_path):
+    custom_compose_file = write_compose_file(
+        tmp_path,
+        "services:\n  web:\n    image: nginx\n",
+        filename="custom.compose.yaml",
+    )
+
+    assert compose.check_docker_compose_file_exists(tmp_path, custom_compose_file) == (
+        True,
+        "Docker Compose file found: custom.compose.yaml",
     )
 
 
@@ -257,6 +283,29 @@ def test_check_docker_compose_build_contexts_uses_compose_file_parent(tmp_path):
     )
 
     assert compose.check_docker_compose_build_contexts(project_path) == (
+        True,
+        "All defined build contexts exist.",
+    )
+
+
+def test_check_docker_compose_build_contexts_uses_custom_compose_file_parent(
+    tmp_path,
+):
+    project_path = tmp_path / "project"
+    project_path.mkdir()
+    custom_path = tmp_path / "custom"
+    custom_path.mkdir()
+    (custom_path / "api").mkdir()
+    custom_compose_file = write_compose_file(
+        custom_path,
+        "services:\n  api:\n    build: ./api\n",
+        filename="custom.compose.yaml",
+    )
+
+    assert compose.check_docker_compose_build_contexts(
+        project_path,
+        custom_compose_file,
+    ) == (
         True,
         "All defined build contexts exist.",
     )

@@ -117,8 +117,12 @@ def expand_check_groups(groups: set[str]) -> set[str]:
     return checks
 
 
-def run_checks(project_path: Path, only: set[str] | None = None) -> CheckRun:
-    checks = _build_checks(project_path)
+def run_checks(
+    project_path: Path,
+    only: set[str] | None = None,
+    compose_file: Path | None = None,
+) -> CheckRun:
+    checks = _build_checks(project_path, compose_file)
 
     if only is not None:
         checks = [(name, run_check) for name, run_check in checks if name in only]
@@ -133,6 +137,7 @@ def run_checks(project_path: Path, only: set[str] | None = None) -> CheckRun:
         skip_message = _get_skip_message(
             name,
             project_path,
+            compose_file,
             docker_cli_available,
             docker_compose_file_exists,
             docker_compose_file_syntax_is_valid,
@@ -160,36 +165,55 @@ def run_checks(project_path: Path, only: set[str] | None = None) -> CheckRun:
 
 def _build_checks(
     project_path: Path,
+    compose_file: Path | None = None,
 ) -> list[tuple[str, Callable[[], tuple[bool, str]]]]:
     return [
         ("Docker CLI", lambda: check_docker_cli_installed()),
         ("Docker daemon", lambda: check_docker_daemon_accessible()),
         ("Docker Compose", lambda: check_docker_compose_available()),
-        ("Compose file", lambda: check_docker_compose_file_exists(project_path)),
-        ("Compose YAML", lambda: check_docker_compose_yaml_syntax(project_path)),
+        (
+            "Compose file",
+            lambda: check_docker_compose_file_exists(project_path, compose_file),
+        ),
+        (
+            "Compose YAML",
+            lambda: check_docker_compose_yaml_syntax(project_path, compose_file),
+        ),
         (
             "Compose services",
-            lambda: check_docker_compose_services_section(project_path),
+            lambda: check_docker_compose_services_section(project_path, compose_file),
         ),
         (
             "Compose build",
-            lambda: check_docker_compose_valid_build_or_image(project_path),
+            lambda: check_docker_compose_valid_build_or_image(
+                project_path,
+                compose_file,
+            ),
         ),
         (
             "Compose build contexts",
-            lambda: check_docker_compose_build_contexts(project_path),
+            lambda: check_docker_compose_build_contexts(project_path, compose_file),
         ),
         (
             "Compose host ports",
-            lambda: check_docker_compose_duplicated_host_ports(project_path),
+            lambda: check_docker_compose_duplicated_host_ports(
+                project_path,
+                compose_file,
+            ),
         ),
         (
             "Host port availability",
-            lambda: check_docker_compose_host_ports_available(project_path),
+            lambda: check_docker_compose_host_ports_available(
+                project_path,
+                compose_file,
+            ),
         ),
         (
             "Compose build context Dockerfiles",
-            lambda: check_docker_compose_build_contexts_dockerfiles(project_path),
+            lambda: check_docker_compose_build_contexts_dockerfiles(
+                project_path,
+                compose_file,
+            ),
         ),
         (
             "Environment example",
@@ -205,6 +229,7 @@ def _build_checks(
 def _get_skip_message(
     name: str,
     project_path: Path,
+    compose_file: Path | None,
     docker_cli_available: bool,
     docker_compose_file_exists: bool,
     docker_compose_file_syntax_is_valid: bool,
@@ -245,7 +270,7 @@ def _get_skip_message(
             return "skipped because Compose YAML is not valid."
         if not docker_compose_services_section_is_valid:
             return "skipped because Compose services are not valid."
-        if not has_build_services(project_path):
+        if not has_build_services(project_path, compose_file):
             return "skipped because no service uses build."
 
     if name == "Environment example" and not has_env_file(project_path):

@@ -55,15 +55,21 @@ def check_docker_compose_available() -> tuple[bool, str]:
     return False, output
 
 
-def check_docker_compose_file_exists(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_file_exists(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
     if compose_file is None:
         return False, "No Docker Compose file was found."
     return True, f"Docker Compose file found: {compose_file.name}"
 
 
-def check_docker_compose_yaml_syntax(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_yaml_syntax(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
 
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
@@ -77,8 +83,11 @@ def check_docker_compose_yaml_syntax(project_path: Path) -> tuple[bool, str]:
     return True, "Docker Compose file has valid YAML syntax."
 
 
-def check_docker_compose_services_section(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_services_section(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
 
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
@@ -100,8 +109,11 @@ def check_docker_compose_services_section(project_path: Path) -> tuple[bool, str
     return True, "The services section exists and is not empty."
 
 
-def check_docker_compose_valid_build_or_image(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_valid_build_or_image(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
     if compose_file is None:
@@ -130,8 +142,11 @@ def check_docker_compose_valid_build_or_image(project_path: Path) -> tuple[bool,
     return True, "All services have either build or image tag."
 
 
-def check_docker_compose_build_contexts(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_build_contexts(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
     if compose_file is None:
@@ -168,8 +183,9 @@ def check_docker_compose_build_contexts(project_path: Path) -> tuple[bool, str]:
 
 def check_docker_compose_build_contexts_dockerfiles(
     project_path: Path,
+    compose_file: Path | None = None,
 ) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+    compose_file = find_compose_file(project_path, compose_file)
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
     if compose_file is None:
@@ -206,8 +222,11 @@ def check_docker_compose_build_contexts_dockerfiles(
     return True, "All defined build contexts have a Dockerfile."
 
 
-def check_docker_compose_duplicated_host_ports(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_duplicated_host_ports(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
     if compose_file is None:
@@ -248,8 +267,11 @@ def check_docker_compose_duplicated_host_ports(project_path: Path) -> tuple[bool
     return True, "All published host ports are unique."
 
 
-def check_docker_compose_host_ports_available(project_path: Path) -> tuple[bool, str]:
-    compose_file = find_compose_file(project_path)
+def check_docker_compose_host_ports_available(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> tuple[bool, str]:
+    compose_file = find_compose_file(project_path, compose_file)
     # This should not run since the check_docker_compose_file_exists function
     # should be called before.
     if compose_file is None:

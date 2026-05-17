@@ -11,7 +11,15 @@ COMPOSE_FILENAMES = (
 )
 
 
-def find_compose_file(project_path: Path) -> Path | None:
+def find_compose_file(
+    project_path: Path,
+    compose_file: Path | None = None,
+) -> Path | None:
+    if compose_file is not None:
+        if compose_file.is_file():
+            return compose_file
+        return None
+
     for filename in COMPOSE_FILENAMES:
         compose_file = project_path / filename
 
@@ -48,8 +56,8 @@ def get_build_dockerfile(build_config: object) -> str | None:
     return None
 
 
-def has_build_services(project_path: Path) -> bool:
-    compose_file = find_compose_file(project_path)
+def has_build_services(project_path: Path, compose_file: Path | None = None) -> bool:
+    compose_file = find_compose_file(project_path, compose_file)
     if compose_file is None:
         return False
 

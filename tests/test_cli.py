@@ -18,7 +18,15 @@ def ready_run() -> CheckRun:
     )
 
 
-def filtered_ready_run(project_path, only=None) -> CheckRun:
+def run_ready(project_path, only=None, compose_file=None):
+    return ready_run()
+
+
+def run_not_ready(project_path, only=None, compose_file=None):
+    return not_ready_run()
+
+
+def filtered_ready_run(project_path, only=None, compose_file=None) -> CheckRun:
     results = [
         CheckResult("Docker CLI", "pass", "ok"),
         CheckResult("Docker daemon", "pass", "ok"),
@@ -48,7 +56,7 @@ def not_ready_run() -> CheckRun:
 
 
 def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -59,11 +67,7 @@ def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path)
 
 
 def test_check_command_reports_skips_separately(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        cli,
-        "run_checks",
-        lambda project_path, only=None: not_ready_run(),
-    )
+    monkeypatch.setattr(cli, "run_checks", run_not_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -81,7 +85,7 @@ def test_check_command_does_not_write_report_without_report_flag(
     monkeypatch,
     tmp_path,
 ):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -90,7 +94,7 @@ def test_check_command_does_not_write_report_without_report_flag(
 
 
 def test_check_command_writes_default_json_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--report"])
 
@@ -119,7 +123,7 @@ def test_check_command_writes_default_json_report(monkeypatch, tmp_path):
 
 
 def test_check_command_writes_custom_json_report_name(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--report", "result.json"])
 
@@ -132,7 +136,7 @@ def test_check_command_writes_custom_json_report_name(monkeypatch, tmp_path):
 
 
 def test_check_command_writes_custom_json_report_path(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
     report_dir = tmp_path / "reports"
     report_dir.mkdir()
     report_file = report_dir / "result.json"
@@ -149,11 +153,7 @@ def test_check_command_writes_custom_json_report_path(monkeypatch, tmp_path):
 
 
 def test_check_command_reports_not_ready_in_json_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        cli,
-        "run_checks",
-        lambda project_path, only=None: not_ready_run(),
-    )
+    monkeypatch.setattr(cli, "run_checks", run_not_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--report"])
 
@@ -173,7 +173,7 @@ def test_check_command_exits_2_when_report_parent_path_does_not_exist(
     monkeypatch,
     tmp_path,
 ):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(
         cli.app,
@@ -186,7 +186,7 @@ def test_check_command_exits_2_when_report_parent_path_does_not_exist(
 
 
 def test_check_command_rejects_extra_argument_without_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "unexpected.json"])
 
@@ -195,7 +195,7 @@ def test_check_command_rejects_extra_argument_without_report(monkeypatch, tmp_pa
 
 
 def test_check_command_rejects_multiple_report_arguments(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(
         cli.app,
@@ -206,10 +206,72 @@ def test_check_command_rejects_multiple_report_arguments(monkeypatch, tmp_path):
     assert "Unexpected argument: two.json" in result.output
 
 
+def test_check_command_uses_custom_compose_file(monkeypatch, tmp_path):
+    calls = []
+    compose_file = tmp_path / "custom.compose.yaml"
+    compose_file.write_text("services:\n  web:\n    image: nginx\n", encoding="utf-8")
+
+    def fake_run_checks(project_path, only=None, compose_file=None):
+        calls.append(compose_file)
+        return ready_run()
+
+    monkeypatch.setattr(cli, "run_checks", fake_run_checks)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--compose", "custom.compose.yaml"],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [compose_file]
+
+
+def test_check_command_uses_absolute_custom_compose_file(monkeypatch, tmp_path):
+    calls = []
+    compose_file = tmp_path / "custom.compose.yaml"
+    compose_file.write_text("services:\n  web:\n    image: nginx\n", encoding="utf-8")
+
+    def fake_run_checks(project_path, only=None, compose_file=None):
+        calls.append(compose_file)
+        return ready_run()
+
+    monkeypatch.setattr(cli, "run_checks", fake_run_checks)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--compose", str(compose_file)],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [compose_file]
+
+
+def test_check_command_exits_2_when_custom_compose_file_is_missing(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(cli, "run_checks", run_ready)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--compose", "missing.compose.yaml"],
+    )
+
+    assert result.exit_code == 2
+    assert "Docker Compose file does not exist" in result.output
+
+
+def test_check_command_exits_2_when_compose_file_path_is_not_provided(tmp_path):
+    result = runner.invoke(cli.app, ["check", str(tmp_path), "--compose"])
+
+    assert result.exit_code == 2
+    assert "Option '--compose' requires an argument." in result.output
+
+
 def test_check_command_runs_only_selected_checks(monkeypatch, tmp_path):
     calls = []
 
-    def fake_run_checks(project_path, only=None):
+    def fake_run_checks(project_path, only=None, compose_file=None):
         calls.append(only)
         return filtered_ready_run(project_path, only=only)
 
@@ -241,7 +303,7 @@ def test_check_command_runs_only_selected_checks(monkeypatch, tmp_path):
 
 
 def test_check_command_rejects_invalid_only_group(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(
         cli.app,
@@ -253,7 +315,7 @@ def test_check_command_rejects_invalid_only_group(monkeypatch, tmp_path):
 
 
 def test_check_command_rejects_empty_only_value(monkeypatch, tmp_path):
-    monkeypatch.setattr(cli, "run_checks", lambda project_path, only=None: ready_run())
+    monkeypatch.setattr(cli, "run_checks", run_ready)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path), "--only", ","])
 
@@ -282,7 +344,7 @@ def test_check_command_writes_report_for_only_checks(monkeypatch, tmp_path):
 def test_check_command_accepts_multiple_only_groups(monkeypatch, tmp_path):
     calls = []
 
-    def fake_run_checks(project_path, only=None):
+    def fake_run_checks(project_path, only=None, compose_file=None):
         calls.append(only)
         return filtered_ready_run(project_path, only=only)
 

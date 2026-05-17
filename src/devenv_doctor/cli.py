@@ -37,6 +37,25 @@ def _resolve_report_path(project_path: Path, report_arg: str | None) -> Path:
     return report_path
 
 
+def _resolve_compose_file(project_path: Path, compose: str | None) -> Path | None:
+    if compose is None:
+        return None
+
+    compose_file = Path(compose)
+    if not compose_file.is_absolute():
+        compose_file = project_path / compose_file
+
+    if not compose_file.is_file():
+        typer.secho(
+            f"Docker Compose file does not exist: {compose_file}",
+            fg="red",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    return compose_file
+
+
 def _write_report(
     report_path: Path,
     project_path: Path,
@@ -136,10 +155,16 @@ def check(
             "docker, network, env."
         ),
     ),
+    compose: str | None = typer.Option(
+        None,
+        "--compose",
+        help="Use a custom Docker Compose file path.",
+    ),
 ) -> None:
     """Run the development environment checks."""
     report_path = _resolve_report_path(project_path, ctx.args[0] if ctx.args else None)
     selected_checks = _parse_only(only)
+    compose_file = _resolve_compose_file(project_path, compose)
 
     if ctx.args and not report:
         typer.secho(f"Unexpected argument: {ctx.args[0]}", fg="red", err=True)
@@ -149,7 +174,7 @@ def check(
         raise typer.Exit(code=2)
 
     typer.echo(f"Checking {project_path}")
-    run = run_checks(project_path, only=selected_checks)
+    run = run_checks(project_path, only=selected_checks, compose_file=compose_file)
 
     for result in run.results:
         _print_result_line(result.status, result.name, result.message)

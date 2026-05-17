@@ -1,6 +1,22 @@
 from devenv_doctor import runner
 
 
+def ok_with_project(project_path, compose_file=None):
+    return True, "ok"
+
+
+def project_true(project_path, compose_file=None):
+    return True
+
+
+def project_false(project_path, compose_file=None):
+    return False
+
+
+def missing_compose_file(project_path, compose_file=None):
+    return False, "No Docker Compose file was found."
+
+
 def patch_all_checks_passing(monkeypatch):
     monkeypatch.setattr(runner, "check_docker_cli_installed", lambda: (True, "ok"))
     monkeypatch.setattr(runner, "check_docker_daemon_accessible", lambda: (True, "ok"))
@@ -8,56 +24,56 @@ def patch_all_checks_passing(monkeypatch):
     monkeypatch.setattr(
         runner,
         "check_docker_compose_file_exists",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_yaml_syntax",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_services_section",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_valid_build_or_image",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_build_contexts",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_duplicated_host_ports",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_host_ports_available",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_docker_compose_build_contexts_dockerfiles",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_env_example_exists",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
     monkeypatch.setattr(
         runner,
         "check_env_variables_match",
-        lambda project_path: (True, "ok"),
+        ok_with_project,
     )
-    monkeypatch.setattr(runner, "has_build_services", lambda project_path: True)
-    monkeypatch.setattr(runner, "has_env_file", lambda project_path: True)
-    monkeypatch.setattr(runner, "has_env_example_file", lambda project_path: True)
+    monkeypatch.setattr(runner, "has_build_services", project_true)
+    monkeypatch.setattr(runner, "has_env_file", project_true)
+    monkeypatch.setattr(runner, "has_env_example_file", project_true)
 
 
 def fail_if_called(*args):
@@ -115,7 +131,7 @@ def test_run_checks_does_not_count_compose_dependency_skips_as_failures(
     monkeypatch.setattr(
         runner,
         "check_docker_compose_file_exists",
-        lambda project_path: (False, "No Docker Compose file was found."),
+        missing_compose_file,
     )
     monkeypatch.setattr(runner, "check_docker_compose_yaml_syntax", fail_if_called)
     monkeypatch.setattr(runner, "check_docker_compose_services_section", fail_if_called)
@@ -156,7 +172,7 @@ def test_run_checks_does_not_count_compose_dependency_skips_as_failures(
 
 def test_run_checks_can_be_ready_with_non_blocking_skips(monkeypatch, tmp_path):
     patch_all_checks_passing(monkeypatch)
-    monkeypatch.setattr(runner, "has_build_services", lambda project_path: False)
+    monkeypatch.setattr(runner, "has_build_services", project_false)
     monkeypatch.setattr(
         runner,
         "check_docker_compose_build_contexts_dockerfiles",
@@ -179,7 +195,7 @@ def test_run_checks_can_be_ready_with_non_blocking_skips(monkeypatch, tmp_path):
 
 def test_run_checks_skips_environment_checks_without_env_file(monkeypatch, tmp_path):
     patch_all_checks_passing(monkeypatch)
-    monkeypatch.setattr(runner, "has_env_file", lambda project_path: False)
+    monkeypatch.setattr(runner, "has_env_file", project_false)
     monkeypatch.setattr(runner, "check_env_example_exists", fail_if_called)
     monkeypatch.setattr(runner, "check_env_variables_match", fail_if_called)
 
@@ -211,6 +227,26 @@ def test_run_checks_runs_only_selected_checks(monkeypatch, tmp_path):
     assert run.total == 2
     assert run.passed == 2
     assert [result.name for result in run.results] == ["Docker CLI", "Compose file"]
+
+
+def test_run_checks_passes_custom_compose_file_to_compose_checks(monkeypatch, tmp_path):
+    compose_file = tmp_path / "custom.compose.yaml"
+    calls = []
+
+    def check_file_exists(project_path, compose_file=None):
+        calls.append((project_path, compose_file))
+        return True, "ok"
+
+    monkeypatch.setattr(runner, "check_docker_compose_file_exists", check_file_exists)
+
+    run = runner.run_checks(
+        tmp_path,
+        only={"Compose file"},
+        compose_file=compose_file,
+    )
+
+    assert run.status == "Ready"
+    assert calls == [(tmp_path, compose_file)]
 
 
 def test_expand_check_groups_returns_group_checks():
