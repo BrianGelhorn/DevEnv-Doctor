@@ -94,6 +94,48 @@ def test_run_checks_returns_structured_results(monkeypatch, tmp_path):
     assert run.results[0] == runner.CheckResult("Docker CLI", "pass", "ok")
 
 
+def test_check_run_exit_code_ignores_non_blocking_failures():
+    run = runner.CheckRun(
+        [
+            runner.CheckResult("Docker CLI", "pass", "ok"),
+            runner.CheckResult(
+                "Environment example",
+                "fail",
+                ".env.example is missing while .env is being used.",
+            ),
+            runner.CheckResult(
+                "Environment variables",
+                "fail",
+                ".env and .env.example variables do not match.",
+            ),
+        ]
+    )
+
+    assert run.status == "Ready"
+    assert run.exit_code == 0
+    assert run.failed == 2
+    assert run.blocking_failed == 0
+
+
+def test_check_run_exit_code_reports_blocking_failures():
+    run = runner.CheckRun(
+        [
+            runner.CheckResult("Docker CLI", "pass", "ok"),
+            runner.CheckResult("Compose file", "fail", "No Compose file."),
+            runner.CheckResult(
+                "Environment variables",
+                "fail",
+                ".env and .env.example variables do not match.",
+            ),
+        ]
+    )
+
+    assert run.status == "Not Ready"
+    assert run.exit_code == 1
+    assert run.failed == 2
+    assert run.blocking_failed == 1
+
+
 def test_check_severities_match_documented_rules():
     assert runner.CHECK_SEVERITIES == {
         "Docker CLI": "Blocking",

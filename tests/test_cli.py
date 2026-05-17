@@ -80,6 +80,24 @@ def severity_run(project_path, only=None, compose_file=None):
     )
 
 
+def non_blocking_failure_run(project_path, only=None, compose_file=None):
+    return CheckRun(
+        [
+            CheckResult("Docker CLI", "pass", "ok"),
+            CheckResult(
+                "Environment example",
+                "fail",
+                ".env.example is missing while .env is being used.",
+            ),
+            CheckResult(
+                "Environment variables",
+                "fail",
+                ".env and .env.example variables do not match.",
+            ),
+        ]
+    )
+
+
 def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "run_checks", run_ready)
 
@@ -129,6 +147,28 @@ def test_check_command_shows_failures_warnings_and_recommendations(
         "[WARN] Environment variables: "
         ".env and .env.example variables do not match."
     ) in result.output
+
+
+def test_check_command_exits_0_when_only_non_blocking_issues_are_found(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(cli, "run_checks", non_blocking_failure_run)
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "Status: Ready" in result.output
+    assert (
+        "[RECOMMENDATION] Environment example: "
+        ".env.example is missing while .env is being used."
+        in result.output
+    )
+    assert (
+        "[WARN] Environment variables: "
+        ".env and .env.example variables do not match."
+        in result.output
+    )
 
 
 def test_check_command_does_not_write_report_without_report_flag(
@@ -236,6 +276,36 @@ def test_check_command_writes_warnings_and_recommendations_in_json_report(
     assert report["errors"] == [
         {"check": "Compose file", "message": "No Docker Compose file was found."}
     ]
+    assert report["warnings"] == [
+        {
+            "check": "Environment variables",
+            "message": ".env and .env.example variables do not match.",
+        }
+    ]
+    assert report["recommendations"] == [
+        {
+            "check": "Environment example",
+            "message": ".env.example is missing while .env is being used.",
+        }
+    ]
+
+
+def test_check_command_writes_exit_0_report_for_non_blocking_issues(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(cli, "run_checks", non_blocking_failure_run)
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path), "--report"])
+
+    report_file = tmp_path / cli.DEFAULT_REPORT_FILENAME
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+
+    assert result.exit_code == 0
+    assert report["status"] == "Ready"
+    assert report["exit_code"] == 0
+    assert report["summary"] == {"total": 3, "passed": 1, "failed": 2, "skipped": 0}
+    assert report["errors"] == []
     assert report["warnings"] == [
         {
             "check": "Environment variables",

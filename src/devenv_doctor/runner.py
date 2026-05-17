@@ -113,16 +113,23 @@ class CheckRun:
         return sum(result.failed for result in self.results)
 
     @property
+    def blocking_failed(self) -> int:
+        return sum(
+            result.failed and result.severity == "Blocking"
+            for result in self.results
+        )
+
+    @property
     def skipped(self) -> int:
         return sum(result.skipped for result in self.results)
 
     @property
     def status(self) -> str:
-        return "Ready" if self.failed == 0 else "Not Ready"
+        return "Ready" if self.blocking_failed == 0 else "Not Ready"
 
     @property
     def exit_code(self) -> int:
-        return 1 if self.failed else 0
+        return 1 if self.blocking_failed else 0
 
 
 def get_check_names() -> tuple[str, ...]:

@@ -16,17 +16,17 @@
 - FR-012: The CLI must detect duplicated host ports. ✅
 - FR-013: The CLI must detect if the port is already being used by another process. ✅
 - FR-014: The CLI must check `.env.example` when environment variables are used. ✅
-- FR-015: The CLI must show a local readiness status.
+- FR-015: The CLI must show a local readiness status. ✅
 - FR-016: The CLI must show warnings, failures and recommendations. ✅
-- FR-017: The CLI must return exit code `0` if no blocking issues are found.
-- FR-018: The CLI must return exit code `1` if blocking issues are found.
-- FR-019: The CLI must return exit code `2` if the tool fails to execute properly.
+- FR-017: The CLI must return exit code `0` if no blocking issues are found. ✅
+- FR-018: The CLI must return exit code `1` if blocking issues are found. ✅
+- FR-019: The CLI must return exit code `2` if the tool fails to execute properly. ✅
 - FR-020: The CLI must detect and notify if the permissions are not enough to check the socket of Docker or scan ports. ✅
 - FR-021: The CLI must validate the parity between `.env` and `.env.example` ✅
 - FR-022: The CLI must be able to generate a machine-readable report file. ✅
 - FR-023: The CLI must be able to run only the specified checks by the developer. ✅
 - FR-024: The CLI must be able to specify a custom Docker Compose file to run the analysis with. ✅
-- FR-025: The CLI must be able to filter and display only the selected severity levels.
+- FR-025: The CLI must be able to filter and display only the selected severity levels. ✅
 - FR-026: The CLI must show how to use the tool correctly.
 
 ## Non-Functional Requirements

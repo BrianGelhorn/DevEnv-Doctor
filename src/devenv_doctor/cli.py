@@ -271,5 +271,5 @@ def check(
     if report:
         _write_report(report_path, project_path, run)
 
-    if run.failed:
-        raise typer.Exit(code=1)
+    if run.exit_code:
+        raise typer.Exit(code=run.exit_code)
