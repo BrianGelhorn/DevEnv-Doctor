@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-binary:
+    name: Build Linux binary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pyinstaller
+
+      - name: Build binary
+        run: |
+          pyinstaller --onefile --name devenv-doctor src/devenv_doctor/__main__.py
+          mv dist/devenv-doctor dist/devenv-doctor-linux-amd64
+
+      - name: Test binary
+        run: |
+          chmod +x dist/devenv-doctor-linux-amd64
+          ./dist/devenv-doctor-linux-amd64 --help
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/devenv-doctor-linux-amd64
+          generate_release_notes: true
