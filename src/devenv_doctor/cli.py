@@ -4,6 +4,7 @@ from pathlib import Path
 import typer
 
 from devenv_doctor.runner import (
+    CheckResult,
     CheckRun,
     expand_check_groups,
     get_check_groups,
@@ -18,6 +19,7 @@ app = typer.Typer(
 )
 
 DEFAULT_REPORT_FILENAME = "devenv-doctor-report.json"
+SEVERITY_LEVELS = {"Critical", "Warning", "Recommendations"}
 
 
 @app.callback()
@@ -83,10 +85,18 @@ def _write_report(
         "errors": [
             {"check": result.name, "message": result.message}
             for result in run.results
-            if result.failed
+            if _issue_severity(result) == "Critical"
         ],
-        "warnings": [],
-        "recommendations": [],
+        "warnings": [
+            {"check": result.name, "message": result.message}
+            for result in run.results
+            if _issue_severity(result) == "Warning"
+        ],
+        "recommendations": [
+            {"check": result.name, "message": result.message}
+            for result in run.results
+            if _issue_severity(result) == "Recommendations"
+        ],
     }
     report_path.write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n",
@@ -95,13 +105,44 @@ def _write_report(
     typer.echo(f"Report written to {report_path}")
 
 
-def _print_result_line(status: str, name: str, message: str) -> None:
-    if status == "pass":
-        typer.secho(f"[PASS] {name}: {message}", fg="green")
-    elif status == "fail":
-        typer.secho(f"[FAIL] {name}: {message}", fg="red")
-    else:
-        typer.echo(f"[SKIP] {name}: {message}")
+def _print_result_line(result: CheckResult) -> None:
+    if result.ok:
+        typer.secho(f"[PASS] {result.name}: {result.message}", fg="green")
+    elif result.skipped:
+        typer.echo(f"[SKIP] {result.name}: {result.message}")
+    elif _issue_severity(result) == "Recommendations":
+        typer.secho(
+            f"[RECOMMENDATION] {result.name}: {result.message}",
+            fg="blue",
+        )
+    elif _issue_severity(result) == "Warning":
+        typer.secho(f"[WARN] {result.name}: {result.message}", fg="yellow")
+    elif result.failed:
+        typer.secho(f"[FAIL] {result.name}: {result.message}", fg="red")
+
+
+def _issue_severity(result: CheckResult) -> str | None:
+    if not result.failed:
+        return None
+    if result.severity == "Recommendation":
+        return "Recommendations"
+    if result.severity == "Warning":
+        return "Warning"
+    return "Critical"
+
+
+def _filter_results_by_severity(
+    results: list[CheckResult],
+    selected_severities: set[str] | None,
+) -> list[CheckResult]:
+    if selected_severities is None:
+        return results
+
+    return [
+        result
+        for result in results
+        if _issue_severity(result) in selected_severities
+    ]
 
 
 def _parse_only(only: str | None) -> set[str] | None:
@@ -126,6 +167,38 @@ def _parse_only(only: str | None) -> set[str] | None:
         raise typer.Exit(code=2)
 
     return expand_check_groups(selected_groups)
+
+
+def _parse_severity(severity: str | None) -> set[str] | None:
+    if severity is None:
+        return None
+
+    selected_severities = {level.strip() for level in severity.split(",")}
+    selected_severities.discard("")
+    invalid_severities = sorted(selected_severities - SEVERITY_LEVELS)
+
+    if invalid_severities:
+        typer.secho(
+            f"Invalid severity level(s): {', '.join(invalid_severities)}",
+            fg="red",
+            err=True,
+        )
+        typer.secho(
+            f"Accepted severity levels: {', '.join(sorted(SEVERITY_LEVELS))}",
+            fg="red",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    if not selected_severities:
+        typer.secho(
+            "No severity levels were provided for --severity.",
+            fg="red",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    return selected_severities
 
 
 @app.command(
@@ -160,10 +233,19 @@ def check(
         "--compose",
         help="Use a custom Docker Compose file path.",
     ),
+    severity: str | None = typer.Option(
+        None,
+        "--severity",
+        help=(
+            "Display only the comma-separated issue severity levels provided: "
+            "Critical, Warning, Recommendations."
+        ),
+    ),
 ) -> None:
     """Run the development environment checks."""
     report_path = _resolve_report_path(project_path, ctx.args[0] if ctx.args else None)
     selected_checks = _parse_only(only)
+    selected_severities = _parse_severity(severity)
     compose_file = _resolve_compose_file(project_path, compose)
 
     if ctx.args and not report:
@@ -176,8 +258,8 @@ def check(
     typer.echo(f"Checking {project_path}")
     run = run_checks(project_path, only=selected_checks, compose_file=compose_file)
 
-    for result in run.results:
-        _print_result_line(result.status, result.name, result.message)
+    for result in _filter_results_by_severity(run.results, selected_severities):
+        _print_result_line(result)
 
     typer.echo()
     typer.secho(f"Status: {run.status}", fg="green" if run.status == "Ready" else "red")

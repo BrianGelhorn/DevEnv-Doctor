@@ -29,6 +29,7 @@ from devenv_doctor.checks.environment_utils import (
 )
 
 CheckStatus = Literal["pass", "fail", "skip"]
+CheckSeverity = Literal["Blocking", "Warning", "Recommendation"]
 
 CHECK_GROUPS = {
     "docker": {
@@ -52,6 +53,22 @@ CHECK_GROUPS = {
     },
 }
 
+CHECK_SEVERITIES: dict[str, CheckSeverity] = {
+    "Docker CLI": "Blocking",
+    "Docker daemon": "Blocking",
+    "Docker Compose": "Blocking",
+    "Compose file": "Blocking",
+    "Compose YAML": "Blocking",
+    "Compose services": "Blocking",
+    "Compose build": "Blocking",
+    "Compose build contexts": "Blocking",
+    "Compose build context Dockerfiles": "Blocking",
+    "Compose host ports": "Blocking",
+    "Host port availability": "Blocking",
+    "Environment example": "Recommendation",
+    "Environment variables": "Warning",
+}
+
 
 @dataclass(frozen=True)
 class CheckResult:
@@ -73,6 +90,10 @@ class CheckResult:
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
+
+    @property
+    def severity(self) -> CheckSeverity:
+        return CHECK_SEVERITIES[self.name]
 
 
 @dataclass(frozen=True)

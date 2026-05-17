@@ -17,7 +17,7 @@
 - FR-013: The CLI must detect if the port is already being used by another process. ✅
 - FR-014: The CLI must check `.env.example` when environment variables are used. ✅
 - FR-015: The CLI must show a local readiness status.
-- FR-016: The CLI must show warnings, failures and recommendations.
+- FR-016: The CLI must show warnings, failures and recommendations. ✅
 - FR-017: The CLI must return exit code `0` if no blocking issues are found.
 - FR-018: The CLI must return exit code `1` if blocking issues are found.
 - FR-019: The CLI must return exit code `2` if the tool fails to execute properly.

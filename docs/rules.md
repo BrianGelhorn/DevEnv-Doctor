@@ -315,7 +315,7 @@ Create a `.env.example` file with the same variables defined in the `.env` file 
 ## ENV-002 - `.env` and `.env.example` variables match
 
 **Category:** Environment  
-**Severity:** Recommendation  
+**Severity:** Warning  
 **Related requirement:** FR-021
 
 ### Description

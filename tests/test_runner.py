@@ -94,6 +94,26 @@ def test_run_checks_returns_structured_results(monkeypatch, tmp_path):
     assert run.results[0] == runner.CheckResult("Docker CLI", "pass", "ok")
 
 
+def test_check_severities_match_documented_rules():
+    assert runner.CHECK_SEVERITIES == {
+        "Docker CLI": "Blocking",
+        "Docker daemon": "Blocking",
+        "Docker Compose": "Blocking",
+        "Compose file": "Blocking",
+        "Compose YAML": "Blocking",
+        "Compose services": "Blocking",
+        "Compose build": "Blocking",
+        "Compose build contexts": "Blocking",
+        "Compose build context Dockerfiles": "Blocking",
+        "Compose host ports": "Blocking",
+        "Host port availability": "Blocking",
+        "Environment example": "Recommendation",
+        "Environment variables": "Warning",
+    }
+
+    assert set(runner.get_check_names()) == set(runner.CHECK_SEVERITIES)
+
+
 def test_run_checks_counts_dependency_skips_separately(monkeypatch, tmp_path):
     patch_all_checks_passing(monkeypatch)
     monkeypatch.setattr(

@@ -56,6 +56,30 @@ def not_ready_run() -> CheckRun:
     )
 
 
+def severity_run(project_path, only=None, compose_file=None):
+    return CheckRun(
+        [
+            CheckResult("Docker CLI", "pass", "ok"),
+            CheckResult("Compose file", "fail", "No Docker Compose file was found."),
+            CheckResult(
+                "Compose YAML",
+                "skip",
+                "skipped because Compose file was not found.",
+            ),
+            CheckResult(
+                "Environment example",
+                "fail",
+                ".env.example is missing while .env is being used.",
+            ),
+            CheckResult(
+                "Environment variables",
+                "fail",
+                ".env and .env.example variables do not match.",
+            ),
+        ]
+    )
+
+
 def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "run_checks", run_ready)
 
@@ -80,6 +104,31 @@ def test_check_command_reports_skips_separately(monkeypatch, tmp_path):
     )
     assert "Status: Not Ready" in result.output
     assert "Summary: 1/3 passed, 1 failed, 1 skipped." in result.output
+
+
+def test_check_command_shows_failures_warnings_and_recommendations(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(cli, "run_checks", severity_run)
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "[FAIL] Compose file: No Docker Compose file was found." in result.output
+    assert (
+        "[SKIP] Compose YAML: skipped because Compose file was not found."
+        in result.output
+    )
+    assert (
+        "[RECOMMENDATION] Environment example: "
+        ".env.example is missing while .env is being used."
+        in result.output
+    )
+    assert (
+        "[WARN] Environment variables: "
+        ".env and .env.example variables do not match."
+    ) in result.output
 
 
 def test_check_command_does_not_write_report_without_report_flag(
@@ -167,6 +216,37 @@ def test_check_command_reports_not_ready_in_json_report(monkeypatch, tmp_path):
     assert report["summary"] == {"total": 3, "passed": 1, "failed": 1, "skipped": 1}
     assert report["errors"] == [
         {"check": "Compose file", "message": "No Docker Compose file was found."}
+    ]
+    assert report["warnings"] == []
+    assert report["recommendations"] == []
+
+
+def test_check_command_writes_warnings_and_recommendations_in_json_report(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(cli, "run_checks", severity_run)
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path), "--report"])
+
+    report_file = tmp_path / cli.DEFAULT_REPORT_FILENAME
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+
+    assert result.exit_code == 1
+    assert report["errors"] == [
+        {"check": "Compose file", "message": "No Docker Compose file was found."}
+    ]
+    assert report["warnings"] == [
+        {
+            "check": "Environment variables",
+            "message": ".env and .env.example variables do not match.",
+        }
+    ]
+    assert report["recommendations"] == [
+        {
+            "check": "Environment example",
+            "message": ".env.example is missing while .env is being used.",
+        }
     ]
 
 
@@ -379,3 +459,103 @@ def test_check_command_accepts_multiple_only_groups(monkeypatch, tmp_path):
     assert "[PASS] Docker CLI: ok" in result.output
     assert "[PASS] Environment example: ok" in result.output
     assert "Host port availability" not in result.output
+
+
+def test_check_command_filters_display_to_critical_severity(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", severity_run)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--severity", "Critical"],
+    )
+
+    assert result.exit_code == 1
+    assert "[FAIL] Compose file: No Docker Compose file was found." in result.output
+    assert "[PASS] Docker CLI: ok" not in result.output
+    assert "Compose YAML" not in result.output
+    assert "Environment example" not in result.output
+    assert "Environment variables" not in result.output
+    assert "Status: Not Ready" in result.output
+    assert "Summary: 1/5 passed, 3 failed, 1 skipped." in result.output
+
+
+def test_check_command_filters_display_to_warning_severity(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", severity_run)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--severity", "Warning"],
+    )
+
+    assert result.exit_code == 1
+    assert (
+        "[WARN] Environment variables: "
+        ".env and .env.example variables do not match."
+        in result.output
+    )
+    assert "Docker CLI" not in result.output
+    assert "[FAIL] Compose file" not in result.output
+    assert "Compose YAML" not in result.output
+    assert "Environment example" not in result.output
+
+
+def test_check_command_filters_display_to_recommendations_severity(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(cli, "run_checks", severity_run)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--severity", "Recommendations"],
+    )
+
+    assert result.exit_code == 1
+    assert (
+        "[RECOMMENDATION] Environment example: "
+        ".env.example is missing while .env is being used."
+    ) in result.output
+    assert "Docker CLI" not in result.output
+    assert "Compose file" not in result.output
+    assert "Compose YAML" not in result.output
+    assert "Environment variables" not in result.output
+
+
+def test_check_command_accepts_multiple_severity_levels(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", severity_run)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--severity", "Warning,Recommendations"],
+    )
+
+    assert result.exit_code == 1
+    assert "Compose YAML" not in result.output
+    assert "Environment example" in result.output
+    assert "Environment variables" in result.output
+    assert "[FAIL] Compose file" not in result.output
+
+
+def test_check_command_rejects_invalid_severity_level(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", run_ready)
+
+    result = runner.invoke(
+        cli.app,
+        ["check", str(tmp_path), "--severity", "Critical,nope"],
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid severity level(s): nope" in result.output
+    assert (
+        "Accepted severity levels: Critical, Recommendations, Warning"
+        in result.output
+    )
+
+
+def test_check_command_rejects_empty_severity_value(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "run_checks", run_ready)
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path), "--severity", ","])
+
+    assert result.exit_code == 2
+    assert "No severity levels were provided for --severity." in result.output
