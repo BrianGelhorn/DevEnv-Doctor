@@ -18,6 +18,7 @@ from devenv_doctor.checks.docker import (
     check_docker_cli_installed,
     check_docker_daemon_accessible,
 )
+from devenv_doctor.checks.environment import check_env_example_exists, has_env_file
 
 app = typer.Typer(
     name="devenv-doctor",
@@ -74,6 +75,10 @@ def check(
         (
             "Compose build context Dockerfiles",
             lambda: check_docker_compose_build_contexts_dockerfiles(project_path),
+        ),
+        (
+            "Environment example",
+            lambda: check_env_example_exists(project_path),
         ),
     ]
 
@@ -161,6 +166,10 @@ def check(
                     f"[FAIL] {name}: skipped because no service uses build."
                 )
                 continue
+        if name == "Environment example" and not has_env_file(project_path):
+            failed += 1
+            typer.echo(f"[FAIL] {name}: skipped because .env file was not found.")
+            continue
 
         ok, message = run_check()
 

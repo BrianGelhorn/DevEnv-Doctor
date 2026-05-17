@@ -15,7 +15,7 @@
 - FR-011: The CLI must validate that Dockerfile exists for services using build. ✅
 - FR-012: The CLI must detect duplicated host ports. ✅
 - FR-013: The CLI must detect if the port is already being used by another process. ✅
-- FR-014: The CLI must check `.env.example` when environment variables are used.
+- FR-014: The CLI must check `.env.example` when environment variables are used. ✅
 - FR-015: The CLI must show a local readiness status.
 - FR-016: The CLI must show warnings, failures and recommendations.
 - FR-017: The CLI must return exit code `0` if no blocking issues are found.

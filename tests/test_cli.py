@@ -49,13 +49,19 @@ def test_check_command_reports_ready_when_all_checks_pass(monkeypatch, tmp_path)
         "check_docker_compose_build_contexts_dockerfiles",
         lambda project_path: (True, "ok"),
     )
+    monkeypatch.setattr(cli, "has_env_file", lambda project_path: True)
+    monkeypatch.setattr(
+        cli,
+        "check_env_example_exists",
+        lambda project_path: (True, "ok"),
+    )
     monkeypatch.setattr(cli, "has_build_services", lambda project_path: True)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
     assert result.exit_code == 0
     assert "Status: Ready" in result.output
-    assert "Summary: 11/11 passed, 0 failed." in result.output
+    assert "Summary: 12/12 passed, 0 failed." in result.output
 
 
 def fail_if_called():
@@ -67,6 +73,7 @@ def patch_docker_checks_passing(monkeypatch):
     monkeypatch.setattr(cli, "check_docker_daemon_accessible", lambda: (True, "ok"))
     monkeypatch.setattr(cli, "check_docker_compose_available", lambda: (True, "ok"))
     monkeypatch.setattr(cli, "has_build_services", lambda project_path: True)
+    monkeypatch.setattr(cli, "has_env_file", lambda project_path: True)
 
 
 def test_check_command_skips_docker_dependent_checks_when_cli_is_missing(
@@ -128,6 +135,12 @@ def test_check_command_skips_docker_dependent_checks_when_cli_is_missing(
         "check_docker_compose_build_contexts_dockerfiles",
         lambda project_path: (True, "ok"),
     )
+    monkeypatch.setattr(
+        cli,
+        "check_env_example_exists",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(cli, "has_env_file", lambda project_path: True)
     monkeypatch.setattr(cli, "has_build_services", lambda project_path: True)
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
@@ -142,7 +155,7 @@ def test_check_command_skips_docker_dependent_checks_when_cli_is_missing(
         in result.output
     )
     assert "Status: Not Ready" in result.output
-    assert "Summary: 8/11 passed, 3 failed." in result.output
+    assert "Summary: 9/12 passed, 3 failed." in result.output
 
 
 def test_check_command_skips_compose_file_dependent_checks_when_file_is_missing(
@@ -178,6 +191,11 @@ def test_check_command_skips_compose_file_dependent_checks_when_file_is_missing(
         "check_docker_compose_host_ports_available",
         fail_if_called,
     )
+    monkeypatch.setattr(
+        cli,
+        "check_env_example_exists",
+        lambda project_path: (True, "ok"),
+    )
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -211,7 +229,7 @@ def test_check_command_skips_compose_file_dependent_checks_when_file_is_missing(
         " found." in result.output
     )
     assert "Status: Not Ready" in result.output
-    assert "Summary: 3/11 passed, 8 failed." in result.output
+    assert "Summary: 4/12 passed, 8 failed." in result.output
 
 
 def test_check_command_skips_yaml_dependent_checks_when_yaml_is_invalid(
@@ -251,6 +269,11 @@ def test_check_command_skips_yaml_dependent_checks_when_yaml_is_invalid(
         "check_docker_compose_host_ports_available",
         fail_if_called,
     )
+    monkeypatch.setattr(
+        cli,
+        "check_env_example_exists",
+        lambda project_path: (True, "ok"),
+    )
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -280,7 +303,7 @@ def test_check_command_skips_yaml_dependent_checks_when_yaml_is_invalid(
         " valid." in result.output
     )
     assert "Status: Not Ready" in result.output
-    assert "Summary: 4/11 passed, 7 failed." in result.output
+    assert "Summary: 5/12 passed, 7 failed." in result.output
 
 
 def test_check_command_skips_services_dependent_checks_when_services_are_invalid(
@@ -324,6 +347,11 @@ def test_check_command_skips_services_dependent_checks_when_services_are_invalid
         "check_docker_compose_host_ports_available",
         fail_if_called,
     )
+    monkeypatch.setattr(
+        cli,
+        "check_env_example_exists",
+        lambda project_path: (True, "ok"),
+    )
 
     result = runner.invoke(cli.app, ["check", str(tmp_path)])
 
@@ -349,7 +377,7 @@ def test_check_command_skips_services_dependent_checks_when_services_are_invalid
         " not valid." in result.output
     )
     assert "Status: Not Ready" in result.output
-    assert "Summary: 5/11 passed, 6 failed." in result.output
+    assert "Summary: 6/12 passed, 6 failed." in result.output
 
 
 def test_check_command_skips_dockerfile_check_when_no_service_uses_build(
@@ -395,6 +423,11 @@ def test_check_command_skips_dockerfile_check_when_no_service_uses_build(
     monkeypatch.setattr(cli, "has_build_services", lambda project_path: False)
     monkeypatch.setattr(
         cli,
+        "check_env_example_exists",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
         "check_docker_compose_build_contexts_dockerfiles",
         fail_if_called,
     )
@@ -407,4 +440,63 @@ def test_check_command_skips_dockerfile_check_when_no_service_uses_build(
         " build." in result.output
     )
     assert "Status: Not Ready" in result.output
-    assert "Summary: 10/11 passed, 1 failed." in result.output
+    assert "Summary: 11/12 passed, 1 failed." in result.output
+
+
+def test_check_command_skips_env_example_check_when_env_file_is_missing(
+    monkeypatch,
+    tmp_path,
+):
+    patch_docker_checks_passing(monkeypatch)
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_file_exists",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_yaml_syntax",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_services_section",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_valid_build_or_image",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_build_contexts",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_duplicated_host_ports",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_host_ports_available",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "check_docker_compose_build_contexts_dockerfiles",
+        lambda project_path: (True, "ok"),
+    )
+    monkeypatch.setattr(cli, "has_env_file", lambda project_path: False)
+    monkeypatch.setattr(cli, "check_env_example_exists", fail_if_called)
+
+    result = runner.invoke(cli.app, ["check", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert (
+        "[FAIL] Environment example: skipped because .env file was not found."
+        in result.output
+    )
+    assert "Status: Not Ready" in result.output
+    assert "Summary: 11/12 passed, 1 failed." in result.output
