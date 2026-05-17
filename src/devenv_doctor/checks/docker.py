@@ -29,10 +29,14 @@ def check_docker_daemon_accessible() -> tuple[bool, str]:
             "Docker Command timed out. Docker may be slow, stuck or not responding.",
         )
 
-    if "permission denied" in output_lower:
+    if (
+        "permission denied" in output_lower
+        or "access denied" in output_lower
+        or "operation not permitted" in output_lower
+    ):
         return False, (
             "Docker daemon may be running, "
-            "but your user does not have permission to access it."
+            "but your user does not have permission to access the Docker socket."
         )
 
     if "cannot connect to the docker daemon" in output_lower:

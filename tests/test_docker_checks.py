@@ -58,7 +58,43 @@ def test_check_docker_daemon_accessible_when_permission_is_denied(monkeypatch):
     assert docker.check_docker_daemon_accessible() == (
         False,
         "Docker daemon may be running, but your user does not have permission "
-        "to access it.",
+        "to access the Docker socket.",
+    )
+
+
+def test_check_docker_daemon_accessible_when_docker_socket_access_is_denied(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        docker,
+        "command_output",
+        lambda command: (
+            1,
+            "Got permission denied while trying to connect to the Docker daemon "
+            "socket at unix:///var/run/docker.sock",
+        ),
+    )
+
+    assert docker.check_docker_daemon_accessible() == (
+        False,
+        "Docker daemon may be running, but your user does not have permission "
+        "to access the Docker socket.",
+    )
+
+
+def test_check_docker_daemon_accessible_when_operation_is_not_permitted(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        docker,
+        "command_output",
+        lambda command: (1, "operation not permitted"),
+    )
+
+    assert docker.check_docker_daemon_accessible() == (
+        False,
+        "Docker daemon may be running, but your user does not have permission "
+        "to access the Docker socket.",
     )
 
 

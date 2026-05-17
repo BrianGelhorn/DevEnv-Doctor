@@ -464,7 +464,38 @@ def test_check_docker_compose_host_ports_available_reports_permission_denied(
 
     assert compose.check_docker_compose_host_ports_available(tmp_path) == (
         False,
-        "Insufficient permissions to inspect the following host ports: web (443).",
+        "Insufficient permissions to scan the following host ports: web (443).",
+    )
+
+
+def test_check_docker_compose_host_ports_available_reports_permission_denied_once(
+    monkeypatch,
+    tmp_path,
+):
+    def deny_port(host_ip, host_port):
+        if host_port == "443":
+            raise PermissionError
+        return True
+
+    monkeypatch.setattr(compose, "_is_host_port_available", deny_port)
+    write_compose_file(
+        tmp_path,
+        (
+            "services:\n"
+            "  web:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '443:443'\n"
+            "  api:\n"
+            "    image: nginx\n"
+            "    ports:\n"
+            "      - '8080:80'\n"
+        ),
+    )
+
+    assert compose.check_docker_compose_host_ports_available(tmp_path) == (
+        False,
+        "Insufficient permissions to scan the following host ports: web (443).",
     )
 
 

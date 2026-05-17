@@ -288,7 +288,7 @@ def check_docker_compose_host_ports_available(project_path: Path) -> tuple[bool,
         ports = ", ".join(permission_denied_host_ports)
         return (
             False,
-            "Insufficient permissions to inspect the following host ports: "
+            "Insufficient permissions to scan the following host ports: "
             f"{ports}.",
         )
 
