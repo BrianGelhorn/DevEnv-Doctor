@@ -1,4 +1,4 @@
-# devenv-doctor
+# DevEnv Doctor
 
 **DevEnv Doctor** is a CLI tool that analyzes Docker and Docker Compose projects to determine whether they are ready to run in a local development environment.
 
