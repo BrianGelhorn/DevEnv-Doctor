@@ -1,5 +1,8 @@
 # devenv-doctor
 
+[![CI](https://github.com/BrianGelhorn/devenv-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/BrianGelhorn/devenv-doctor/actions/workflows/ci.yml)
+[![Release](https://github.com/BrianGelhorn/devenv-doctor/actions/workflows/release.yml/badge.svg)](https://github.com/BrianGelhorn/devenv-doctor/actions/workflows/release.yml)
+
 **DevEnv Doctor** is a CLI tool that analyzes Docker and Docker Compose projects to determine whether they are ready to run in a local development environment.
 
 It checks a project against predefined operational policies and best practices, reports detected issues by severity, and provides actionable recommendations to fix local environment problems before starting development.
